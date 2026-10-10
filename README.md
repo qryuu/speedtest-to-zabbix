@@ -2,14 +2,19 @@
 
 Windows および Linux 上で Ookla Speedtest CLI を定期実行し、回線計測結果をパースして Zabbix サーバーへ送信するツールセットです。
 
+> [!TIP]
+> **🤖 AI コーディングアシスタントをご利用の場合 (AI-setup-ready)**:  
+> Antigravity, Cursor, Claude Code, GitHub Copilot などの AI アシスタントに対して**「このリポジトリをセットアップして」**と伝えるだけで、対話形式で環境判定・動作テスト・タスク登録・テンプレートインポートまで自動完了します。詳細は [`AGENTS.md`](./AGENTS.md) をご覧ください。
+
 ---
 
 ## 特徴
 
+- **🤖 AI 自動セットアップ対応**: [`AGENTS.md`](./AGENTS.md) に基づき、AI アシスタントが対話型ウィザード形式で全自動セットアップ。
 - **選べる 3 つの送信方式**: 環境や好みに合わせて、PowerShell / Python / ZabbixSender の中から最適な送信方法を選択可能。
 - **軽量リポジトリ**: 実行バイナリを同梱せず、公式最新版を安全にダウンロードして使用する設計。
-- **Zabbix 7.0 共通テンプレート付属**: Windows と Linux の両環境を同一の `Speedtest.yaml` テンプレートで監視可能。
-- **堅牢なパースとリトライ機構**: JSON 出力の確実な抽出・パースと、ネットワーク一時エラー時の自動再試行をサポート。
+- **Zabbix 7.0 共通テンプレート付属**: Windows と Linux の両環境を同一の `Speedtest.yaml` テンプレートで監視可能（Zabbix API による自動登録スクリプトも同梱）。
+- **ゼロコンフィグ & 堅牢性**: `zabbix_agentd.conf` からのサーバー設定自動読取、および JSON パース・リトライ機構を完備。
 
 ---
 
@@ -135,11 +140,40 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 
 ---
 
+---
+
 ## Zabbix テンプレートのインポートと設定
 
+テンプレート `Speedtest.yaml` は以下のいずれかの方法で Zabbix サーバーへ登録できます。
+
+### 方法 A: Zabbix API で自動インポート（推奨）
+同梱のインポートスクリプトを使用すると、Web ブラウザを開かずにテンプレートのインポートとホストへの紐付けが完了します。
+
+```powershell
+# Windows (PowerShell)
+.\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest"
+```
+
+```bash
+# Linux / クロスプラットフォーム (Python 標準ライブラリのみで動作)
+python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest"
+```
+
+> [!NOTE]
+> **API トークンの取得方法 (Zabbix 6.0 / 7.0 共通)**:
+> 1. Zabbix Web UI にログインし、右上の **ユーザー設定アイコン** をクリック。
+> 2. **「APIトークン (API tokens)」** タブを選択し、右上の **「APIトークン作成 (Create API token)」** をクリック。
+> 3. 任意の名前（例: `Speedtest Setup`）を入力して「追加」をクリック。
+> 4. 表示された **認証トークン文字列** をコピーして使用します。
+
+---
+
+### 方法 B: Zabbix Web UI で手動インポート
 1. Zabbix Web UI の「データ収集 (Data collection)」→「テンプレート (Templates)」を開く。
 2. 右上の「インポート (Import)」をクリックし、本リポジトリの `Speedtest.yaml` を選択してインポート。
 3. 監視対象のホスト（Windows または Linux）に `Speedtest（Ookla CLI）` テンプレートをリンク。
+
+---
 
 ### 受信アイテム一覧（Zabbix トラッパー）
 
@@ -163,7 +197,31 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 
 ## 定期実行（スケジューラ登録）
 
-### Windows タスクスケジューラ
+### 自動セットアップスクリプトを使う場合（推奨）
+
+ワンライナーで動作検証から定期実行登録まで自動化されます：
+
+```powershell
+# Windows: 毎時0分のタスクスケジューラ登録を一括実行
+.\setup.ps1 -Schedule Hourly
+
+# Zabbix サーバー指定およびテンプレート登録も同時に行う例
+.\setup.ps1 -ZabbixServer "192.168.1.10" -Hostname "MyPC" -Schedule Hourly -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>"
+```
+
+```bash
+# Linux: 毎時0分の cron 登録を一括実行
+./setup.sh -c hourly
+
+# Zabbix サーバー指定およびテンプレート登録も同時に行う例
+./setup.sh -z 192.168.1.10 -s MyServer -c hourly -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>"
+```
+
+---
+
+### 手動でスケジューラ登録する場合
+
+#### Windows タスクスケジューラ
 - **プログラム/スクリプト**: `pwsh.exe`（または `powershell.exe`）
 - **引数の追加**:
   ```powershell
@@ -172,7 +230,7 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 - **開始**: `C:\Path\To\speeadtest_bat`
 - （※Python 方式の場合は、プログラムに `pythonw.exe`、引数に `C:\Path\To\speeadtest_bat\speedtest_zabbix.py` を指定）
 
-### Linux (cron)
+#### Linux (cron)
 
 ```bash
 # パターン A: Linux Shell スクリプト方式 (pip 禁止環境・セキュア環境推奨)
@@ -184,3 +242,22 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 # パターン C: パイプワンライナー方式
 0 * * * * speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<ZabbixServer_IP>" -s "Speedtest" -k speedtest.json -i - > /dev/null 2>&1
 ```
+
+---
+
+## リポジトリ構成一覧
+
+| ファイル | 役割・説明 |
+| :--- | :--- |
+| [`AGENTS.md`](./AGENTS.md) | **AI コーディングアシスタント向け対話指示書** (AI-setup-ready プロトコル) |
+| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 共通監視テンプレート (トラッパーアイテム群 & 自動計算) |
+| [`speedtest.ps1`](./speedtest.ps1) | Windows 用 PowerShell 送信スクリプト (ソケット送信 / ZabbixSender 兼用) |
+| [`speedtest.bat`](./speedtest.bat) | Windows 用実行ラッパーバッチ (PowerShell 7 / 5.1 振り分け) |
+| [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Linux / Windows 共通 Python 送信スクリプト (`zabbix-utils` 使用) |
+| [`speedtest_zabbix.sh`](./speedtest_zabbix.sh) | Linux 用シェルスクリプト (`zabbix-sender` 使用・pip 不要) |
+| [`setup.ps1`](./setup.ps1) | Windows 自動セットアップスクリプト (検証・タスク登録・テンプレート登録) |
+| [`setup.sh`](./setup.sh) | Linux 自動セットアップスクリプト (検証・cron 登録・テンプレート登録) |
+| [`import_template.ps1`](./import_template.ps1) | Zabbix API テンプレート自動登録スクリプト (PowerShell 版) |
+| [`import_template.py`](./import_template.py) | Zabbix API テンプレート自動登録スクリプト (Python 標準ライブラリ版) |
+| [`README.md`](./README.md) | プロジェクト仕様書・マニュアル |
+
