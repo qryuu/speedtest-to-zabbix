@@ -17,9 +17,10 @@ Windows および Linux 上で Ookla Speedtest CLI を定期実行し、回線�
 
 | 送信方式 | コマンド / スクリプト | 必要な環境 | 特徴・おすすめシーン |
 | :--- | :--- | :--- | :--- |
-| **1. PowerShell 方式**<br>(推奨: Windows) | `speedtest.ps1`<br>(または `speedtest.bat`) | Windows<br>(PS 5.1 / 7 系) | **追加インストール不要**。<br>.NET ソケット通信で Zabbix トラッパーへ直接送信するため、`zabbix_sender.exe` や Python のインストールが不要。 |
-| **2. Python 方式**<br>(推奨: Linux / 共通) | `speedtest_zabbix.py` | Python 3.8+<br>`zabbix-utils` | **OS を問わず完全同一コードで動作**。<br>公式 Python ライブラリ (`zabbix_utils`) を使用し、Windows / Linux (自宅ラック等) で共通運用したい場合に最適。 |
-| **3. ZabbixSender 方式** | `speedtest.ps1 -SendMethod ZabbixSender`<br>または Linux ワンライナー | `zabbix_sender` バイナリ | 既存の Zabbix Sender 実行バイナリをそのまま活用したい場合。 |
+| **1. PowerShell 方式**<br>(Windows 推奨) | `speedtest.ps1`<br>(または `speedtest.bat`) | Windows<br>(PS 5.1 / 7 系) | **追加インストール不要**。<br>.NET ソケット通信で Zabbix トラッパーへ直接送信するため、`zabbix_sender.exe` や Python のインストールが不要。 |
+| **2. Python 方式**<br>(Linux / Windows 共通推奨) | `speedtest_zabbix.py` | Python 3.8+<br>`zabbix-utils` | **OS を問わず完全同一コードで動作**。<br>公式 Python ライブラリ (`zabbix_utils`) を使用し、Windows / Linux (自宅ラック等) で共通運用したい場合に最適。 |
+| **3. Linux Shell 方式**<br>(Linux セキュア環境推奨) | `speedtest_zabbix.sh` | Linux (bash)<br>`zabbix-sender` | **pip インストール禁止・セキュア環境に最適**。<br>OS パッケージマネージャー（`apt` / `dnf`）の `zabbix-sender` のみで動作し、リトライやエラー処理も内包。 |
+| **4. ZabbixSender (Win) 方式** | `speedtest.ps1 -SendMethod ZabbixSender` | `zabbix_sender.exe` | Windows 環境で既存の Zabbix Sender バイナリを活用したい場合。 |
 
 ---
 
@@ -76,14 +77,29 @@ python speedtest_zabbix.py
 python speedtest_zabbix.py --server 192.168.1.10 --host MyServer
 ```
 
-### 方式 3: Zabbix Sender バイナリ送信
+### 方式 3: Linux Shell スクリプト送信（pip 禁止環境・セキュア環境推奨）
+
+```bash
+# 実行権限の付与
+chmod +x speedtest_zabbix.sh
+
+# 動作確認 (Zabbix への送信を行わず画面表示)
+./speedtest_zabbix.sh -d
+
+# 通常実行
+./speedtest_zabbix.sh
+
+# 引数でサーバーやホスト名を指定
+./speedtest_zabbix.sh -z 192.168.1.10 -s "MyServer"
+
+# （参考）最小限のワンライナー送信
+speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194.38.180 -s "Speedtest" -k speedtest.json -i -
+```
+
+### 方式 4: Windows ZabbixSender バイナリ送信
 
 ```powershell
-# Windows
 .\speedtest.ps1 -SendMethod ZabbixSender
-
-# Linux ワンライナー (cron 登録用)
-speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194.38.180 -s "Speedtest" -k speedtest.json -i -
 ```
 
 ---
@@ -126,7 +142,14 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194
 - （※Python 方式の場合は、プログラムに `pythonw.exe`、引数に `C:\Path\To\speeadtest_bat\speedtest_zabbix.py` を指定）
 
 ### Linux (cron)
+
 ```bash
-# 毎時 0 分に計測・送信
+# パターン A: Linux Shell スクリプト方式 (pip 禁止環境・セキュア環境推奨)
+0 * * * * /path/to/speedtest_zabbix.sh > /dev/null 2>&1
+
+# パターン B: Python 方式
 0 * * * * python3 /path/to/speedtest_zabbix.py > /dev/null 2>&1
+
+# パターン C: パイプワンライナー方式
+0 * * * * speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194.38.180 -s "Speedtest" -k speedtest.json -i - > /dev/null 2>&1
 ```
