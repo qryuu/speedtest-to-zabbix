@@ -243,13 +243,15 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 ### Manual Scheduling
 
 #### Windows Task Scheduler
-- **Program/script**: `pwsh.exe` (or `powershell.exe`)
+- **Program/script**: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+  > [!TIP]
+  > When using Microsoft Store editions of PowerShell 7 or background non-interactive sessions, relative name `pwsh.exe` may fail to resolve (`0x80070002`). Use the absolute path to Windows built-in `powershell.exe` or full path to standard `pwsh.exe`.
 - **Add arguments**:
   ```powershell
   -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
   ```
 - **Start in**: `C:\Path\To\speedtest-to-zabbix`
-- *(For Python method, use `pythonw.exe` and pass `speedtest_zabbix.py` as argument)*
+- *(For Python method, use full path to `pythonw.exe` and pass `speedtest_zabbix.py` as argument)*
 
 #### Linux (cron)
 

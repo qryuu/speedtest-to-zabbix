@@ -244,13 +244,15 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 ### 手動でスケジューラ登録する場合
 
 #### Windows タスクスケジューラ
-- **プログラム/スクリプト**: `pwsh.exe`（または `powershell.exe`）
+- **プログラム/スクリプト**: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+  > [!TIP]
+  > Microsoft Store 版 PowerShell 7 等を使用している場合、バックグラウンドのタスク実行時に相対名 `pwsh.exe` の実体解決に失敗（`0x80070002`）することがあります。確実な実行のため、Windows 標準の `powershell.exe` 絶対パス、または正規インストールされた `pwsh.exe` の実体フルパスを指定してください。
 - **引数の追加**:
   ```powershell
   -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
   ```
 - **開始**: `C:\Path\To\speedtest-to-zabbix`
-- （※Python 方式の場合は、プログラムに `pythonw.exe`、引数に `C:\Path\To\speedtest-to-zabbix\speedtest_zabbix.py` を指定）
+- （※Python 方式の場合は、プログラムに `pythonw.exe` の絶対パス、引数に `C:\Path\To\speedtest-to-zabbix\speedtest_zabbix.py` を指定）
 
 #### Linux (cron)
 
