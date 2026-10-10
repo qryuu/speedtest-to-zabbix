@@ -5,6 +5,7 @@ Ookla Speedtest CLI to Zabbix Sender (Python / zabbix_utils 版)
 Linux / Windows 両環境で共通利用可能な計測・送信スクリプト。
 """
 
+import os
 import sys
 import json
 import shutil
@@ -85,7 +86,7 @@ def run_speedtest(speedtest_cmd, max_retries=3, retry_delay=5):
 
 def main():
     parser = argparse.ArgumentParser(description="Ookla Speedtest to Zabbix (Python)")
-    parser.add_argument("--server", "-z", default="52.194.38.180", help="Zabbix サーバー IP またはホスト名")
+    parser.add_argument("--server", "-z", default=os.getenv("ZABBIX_SERVER", "127.0.0.1"), help="Zabbix サーバー IP またはホスト名 (デフォルト: 127.0.0.1 または環境変数 ZABBIX_SERVER)")
     parser.add_argument("--port", "-p", type=int, default=10051, help="Zabbix トラッパーポート (デフォルト: 10051)")
     parser.add_argument("--host", "-s", default="Speedtest", help="Zabbix 上の登録ホスト名 (デフォルト: Speedtest)")
     parser.add_argument("--prefix", "-k", default="speedtest", help="アイテムキープレフィックス (デフォルト: speedtest)")

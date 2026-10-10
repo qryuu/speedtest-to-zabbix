@@ -9,7 +9,7 @@
       2. ZabbixSender 方式 (外部の zabbix_sender.exe バイナリを使用)
 
 .PARAMETER ZabbixServer
-    送信先 Zabbix サーバーの IP またはホスト名 (デフォルト: 52.194.38.180)
+    送信先 Zabbix サーバーの IP またはホスト名 (デフォルト: 127.0.0.1 または環境変数 ZABBIX_SERVER)
 
 .PARAMETER ZabbixPort
     Zabbix トラッパーのポート番号 (デフォルト: 10051)
@@ -45,7 +45,7 @@
 [CmdletBinding()]
 param(
     [Parameter()]
-    [string]$ZabbixServer = "52.194.38.180",
+    [string]$ZabbixServer = "",
 
     [Parameter()]
     [int]$ZabbixPort = 10051,
@@ -76,6 +76,11 @@ param(
 # 出力文字コードを UTF-8 に統一
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# Zabbix サーバーのデフォルト解決 (引数 -> 環境変数 -> 127.0.0.1)
+if ([string]::IsNullOrWhiteSpace($ZabbixServer)) {
+    $ZabbixServer = if ($env:ZABBIX_SERVER) { $env:ZABBIX_SERVER } else { "127.0.0.1" }
+}
 
 # デフォルトパスの安全な解決 (PowerShell 5.1 互換)
 if ([string]::IsNullOrWhiteSpace($SpeedtestPath)) {
