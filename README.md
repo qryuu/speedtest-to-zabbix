@@ -19,10 +19,11 @@ Windows 上で Ookla Speedtest CLI を定期実行し、計測結果をパース
 
 | ファイル | 概要 |
 | :--- | :--- |
-| `speedtest.ps1` | メインの PowerShell スクリプト |
+| `speedtest.ps1` | メインの PowerShell スクリプト（Windows 用） |
 | `speedtest.bat` | PowerShell スクリプトを実行するバッチラッパー |
 | `speedtest.exe` | Ookla Speedtest CLI（Windows x64） |
 | `zabbix_sender.exe` | Zabbix Sender（Windows x64） |
+| `Speedtest.yaml` | Zabbix 7.0 用テンプレート（Linux / Windows 共通） |
 | `speedtest.md` | Speedtest CLI 公式ドキュメント |
 
 ---
@@ -50,14 +51,32 @@ Zabbix サーバーへ送信せず、計測とパース結果のみをコンソ�
 .\speedtest.ps1 -ZabbixServer 192.168.1.10 -Hostname MyPC -DryRun
 ```
 
-### 4. バッチファイル経由での実行
-タスクスケジューラなどで `.bat` を呼び出す場合もそのまま実行可能です。
+### 4. バッチファイル経由での実行 (Windows)
+タスクスケジューラなどで `.bat` を呼び出す場合もそのまま実行可能です。PowerShell 7（`pwsh.exe`）が導入されている場合は優先して使用されます。
 
 ```cmd
 speedtest.bat
 rem 引数もそのまま引き渡せます
 speedtest.bat -DryRun
 ```
+
+### 5. Linux 環境での実行 (共通テンプレート対応)
+Linux 環境（Ubuntu / Debian / CentOS / Alpine / ラズパイ等）でも、同じ `Speedtest` テンプレートをホストにリンクしてそのまま監視できます。
+
+```bash
+# ワンライナー実行例 (cron にそのまま登録可能)
+speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194.38.180 -s "<Zabbix上のホスト名>" -k speedtest.json -i -
+```
+
+---
+
+## Zabbix テンプレートのインポート手順
+
+1. Zabbix Web フロントエンドにログイン。
+2. 左メニュー「データ収集 (Data collection)」→「テンプレート (Templates)」を開く。
+3. 右上の「インポート (Import)」をクリック。
+4. 本リポジトリ同梱の `Speedtest.yaml` を選択して「インポート」を実行。
+5. 監視対象のホスト（Windows PC または Linux サーバー）に `Speedtest（Ookla CLI）` テンプレートをリンク。
 
 ---
 

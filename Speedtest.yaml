@@ -1,0 +1,355 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: e5be8e009c61477ca38b16ae08352a19
+      name: 自宅ラックテンプレート
+    - uuid: 9a8b161e6ea443b5b300a59a3fe69ece
+      name: 'qryuu Templates'
+  templates:
+    - uuid: 22b975348cd340c4987a1ee61481c8b6
+      template: Speedtest
+      name: 'Speedtest（Ookla CLI）'
+      description: |
+        Ookla Speedtest CLI による回線速度および品質監視テンプレート（Linux / Windows 共通）。
+        クライアント側から zabbix_sender で送信された speedtest.json をマスターアイテムで受信し、
+        依存アイテム（JSONPath）で各メトリクスを自動パース・展開してグラフ化および閾値監視を行います。
+      groups:
+        - name: 自宅ラックテンプレート
+        - name: 'qryuu Templates'
+      items:
+        - uuid: 602a3cd356e744c2ad02a72a37fa3eda
+          name: 'Speedtest: 生データ (JSON)'
+          type: TRAP
+          key: speedtest.json
+          delay: '0'
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          description: 'Speedtest CLI の生結果 JSON を受け取るマスターアイテム'
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: 5bace2b5aebd44a18efe562164d451f5
+          name: 'Speedtest: ダウンロード速度'
+          type: DEPENDENT
+          key: speedtest.download.bps
+          delay: '0'
+          history: 90d
+          units: bps
+          description: '回線のダウンロード速度 (bps)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.download.bandwidth
+            - type: MULTIPLIER
+              parameters:
+                - '8'
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+          triggers:
+            - uuid: bc452cc537944cb8b079333023858520
+              expression: 'last(/Speedtest/speedtest.download.bps)<{$SPEEDTEST.WARN.DOWN} and {$SPEEDTEST.WARN.DOWN}>0'
+              name: 'Speedtest: ダウンロード速度低下 ({ITEM.LASTVALUE} < {$SPEEDTEST.WARN.DOWN})'
+              priority: WARNING
+              description: 'ダウンロード速度が設定された閾値を下回りました。'
+              manual_close: 'YES'
+        - uuid: b61b176e5269477a8594072b1dc25421
+          name: 'Speedtest: アップロード速度'
+          type: DEPENDENT
+          key: speedtest.upload.bps
+          delay: '0'
+          history: 90d
+          units: bps
+          description: '回線のアップロード速度 (bps)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.upload.bandwidth
+            - type: MULTIPLIER
+              parameters:
+                - '8'
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+          triggers:
+            - uuid: 38202f1cc401489892739834a86f6f5a
+              expression: 'last(/Speedtest/speedtest.upload.bps)<{$SPEEDTEST.WARN.UP} and {$SPEEDTEST.WARN.UP}>0'
+              name: 'Speedtest: アップロード速度低下 ({ITEM.LASTVALUE} < {$SPEEDTEST.WARN.UP})'
+              priority: WARNING
+              description: 'アップロード速度が設定された閾値を下回りました。'
+              manual_close: 'YES'
+        - uuid: ef7970ba8c7149eeba7cdaa701235a59
+          name: 'Speedtest: Ping 遅延'
+          type: DEPENDENT
+          key: speedtest.ping.latency
+          delay: '0'
+          history: 90d
+          value_type: FLOAT
+          units: ms
+          description: 'アイドル時の Ping 遅延時間 (ms)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ping.latency
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+          triggers:
+            - uuid: 4c6e5aaeb40a490e8f4777819dbdba25
+              expression: 'last(/Speedtest/speedtest.ping.latency)>{$SPEEDTEST.WARN.PING} and {$SPEEDTEST.WARN.PING}>0'
+              name: 'Speedtest: Ping遅延悪化 ({ITEM.LASTVALUE} > {$SPEEDTEST.WARN.PING}ms)'
+              priority: WARNING
+              description: 'Ping 遅延が設定された閾値を超過しました。'
+              manual_close: 'YES'
+        - uuid: 418dfb17574c42b293f7ce25ef6d4339
+          name: 'Speedtest: Ping ジッター'
+          type: DEPENDENT
+          key: speedtest.ping.jitter
+          delay: '0'
+          history: 90d
+          value_type: FLOAT
+          units: ms
+          description: 'Ping ジッター (揺らぎ)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.ping.jitter
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: f8d267a6a7634efc967110c45288dfee
+          name: 'Speedtest: ダウンロード負荷時遅延'
+          type: DEPENDENT
+          key: speedtest.download.latency
+          delay: '0'
+          history: 90d
+          value_type: FLOAT
+          units: ms
+          description: 'ダウンロードテスト負荷中のレイテンシ (Bufferbloat 検知)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.download.latency.iqm
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: 0ff5cb27b17f4f6aa3bc0f6ea6579086
+          name: 'Speedtest: アップロード負荷時遅延'
+          type: DEPENDENT
+          key: speedtest.upload.latency
+          delay: '0'
+          history: 90d
+          value_type: FLOAT
+          units: ms
+          description: 'アップロードテスト負荷中のレイテンシ (Bufferbloat 検知)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.upload.latency.iqm
+              error_handler: DISCARD_VALUE
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: d01780745b5a4bb4ae6650c144791987
+          name: 'Speedtest: パケットロス率'
+          type: DEPENDENT
+          key: speedtest.packetloss
+          delay: '0'
+          history: 90d
+          value_type: FLOAT
+          units: '%'
+          description: 'パケットロス率 (%)'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.packetLoss
+              error_handler: CUSTOM_VALUE
+              error_handler_params: '0'
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+          triggers:
+            - uuid: 16cf912909ff4022a156aaeb69bdc2ee
+              expression: 'last(/Speedtest/speedtest.packetloss)>{$SPEEDTEST.WARN.LOSS} and {$SPEEDTEST.WARN.LOSS}>0'
+              name: 'Speedtest: パケットロス発生 ({ITEM.LASTVALUE} > {$SPEEDTEST.WARN.LOSS}%)'
+              priority: WARNING
+              description: '回線のパケットロスが設定値を超過しました。'
+              manual_close: 'YES'
+        - uuid: 7975438f6baf4692a7d2c213b17ae3f5
+          name: 'Speedtest: ダウンロード転送量'
+          type: DEPENDENT
+          key: speedtest.download.bytes
+          delay: '0'
+          history: 90d
+          units: B
+          description: 'ダウンロード計測で消費したデータ通信量'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.download.bytes
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: 26d8b34e5e894e8fae7ebf301dbe32c7
+          name: 'Speedtest: アップロード転送量'
+          type: DEPENDENT
+          key: speedtest.upload.bytes
+          delay: '0'
+          history: 90d
+          units: B
+          description: 'アップロード計測で消費したデータ通信量'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.upload.bytes
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: 9d053c2a87f24247abc834a3b3307583
+          name: 'Speedtest: 接続先サーバー名'
+          type: DEPENDENT
+          key: speedtest.server.name
+          delay: '0'
+          history: 90d
+          value_type: CHAR
+          trends: '0'
+          description: '計測に使用された Speedtest サーバー名'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.server.name
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: 134848637e7b409982850e70edb8f6ce
+          name: 'Speedtest: 接続先サーバーID'
+          type: DEPENDENT
+          key: speedtest.server.id
+          delay: '0'
+          history: 90d
+          description: '計測に使用された Speedtest サーバー ID'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.server.id
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+        - uuid: 7a551f91ddd046738fdebe3ad13b954b
+          name: 'Speedtest: 結果URL'
+          type: DEPENDENT
+          key: speedtest.result.url
+          delay: '0'
+          history: 90d
+          value_type: CHAR
+          trends: '0'
+          description: '計測結果の Web 共有 URL'
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - $.result.url
+          master_item:
+            key: speedtest.json
+          tags:
+            - tag: Application
+              value: Speedtest
+      macros:
+        - macro: '{$SPEEDTEST.NODATA}'
+          value: 3h
+          description: 'データ未着検知時間（未着トリガー用）'
+        - macro: '{$SPEEDTEST.WARN.DOWN}'
+          value: 50M
+          description: 'ダウンロード速度低下警告閾値（0で無効化）'
+        - macro: '{$SPEEDTEST.WARN.UP}'
+          value: 20M
+          description: 'アップロード速度低下警告閾値（0で無効化）'
+        - macro: '{$SPEEDTEST.WARN.PING}'
+          value: '50'
+          description: 'Ping遅延警告閾値 (ms)（0で無効化）'
+        - macro: '{$SPEEDTEST.WARN.LOSS}'
+          value: '2'
+          description: 'パケットロス警告閾値 (%)（0で無効化）'
+  triggers:
+    - uuid: 8201bfbb18b74f949a35394ae64776e7
+      expression: 'nodata(/Speedtest/speedtest.json,{$SPEEDTEST.NODATA})=1'
+      name: 'Speedtest: 計測データを受信できていません ({$SPEEDTEST.NODATA}経過)'
+      priority: WARNING
+      description: '定期計測タスク（タスクスケジューラまたはcron）の停止、またはネットワーク通信障害の可能性があります。'
+      manual_close: 'YES'
+  graphs:
+    - uuid: 3f9348960d4d4103918db53e3cb741e2
+      name: 'Speedtest: 通信速度 (Download / Upload)'
+      graph_items:
+        - drawtype: BOLD_LINE
+          color: 1A7C11
+          item:
+            host: Speedtest
+            key: speedtest.download.bps
+        - sortorder: '1'
+          drawtype: BOLD_LINE
+          color: 2774A4
+          item:
+            host: Speedtest
+            key: speedtest.upload.bps
+    - uuid: 9718dbcb47bd42fc84c5f8f3c250044f
+      name: 'Speedtest: レイテンシ・ジッター品質'
+      graph_items:
+        - drawtype: BOLD_LINE
+          color: F63100
+          item:
+            host: Speedtest
+            key: speedtest.ping.latency
+        - sortorder: '1'
+          drawtype: LINE
+          color: F6C400
+          item:
+            host: Speedtest
+            key: speedtest.ping.jitter
+        - sortorder: '2'
+          drawtype: LINE
+          color: 0288D1
+          item:
+            host: Speedtest
+            key: speedtest.download.latency
+        - sortorder: '3'
+          drawtype: LINE
+          color: 7B1FA2
+          item:
+            host: Speedtest
+            key: speedtest.upload.latency
+    - uuid: 9e91ca8276604ed8b6003181b619e2d1
+      name: 'Speedtest: パケットロス率'
+      ymin_type_1: FIXED
+      ymax_type_1: FIXED
+      yaxismin: '0'
+      yaxismax: '100'
+      graph_items:
+        - drawtype: GRADIENT_LINE
+          color: E45959
+          item:
+            host: Speedtest
+            key: speedtest.packetloss
