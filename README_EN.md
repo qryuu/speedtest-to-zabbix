@@ -153,19 +153,29 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 
 ## Zabbix Template Import & Configuration
 
-You can import `Speedtest.yaml` into your Zabbix server using either automated API scripts or the Web UI.
+Two template editions are available depending on your preferred language:
+- **English edition (Recommended)**: `Speedtest_EN.yaml` (fully compliant with official Zabbix Community Templates)
+- **Japanese edition**: `Speedtest.yaml` (item and trigger names in Japanese)
+
+You can import either template into your Zabbix server using automated API scripts or the Web UI.
 
 ### Method A: Automated Import via Zabbix API (Recommended)
-Use the included scripts to import the template and link it to your target host without opening a browser:
+Use the included scripts to import the template and link it to your target host without opening a browser. The script automatically selects the template matching your OS culture, or you can specify it explicitly via `-Language EN` / `-Language JA`:
 
 ```powershell
-# Windows (PowerShell)
+# Windows (PowerShell) - Automatically selects English unless OS culture is Japanese
 .\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest"
+
+# Explicitly specifying English edition
+.\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest" -Language EN
 ```
 
 ```bash
-# Linux / Cross-platform (uses Python standard libraries only, no pip required)
+# Linux / Cross-platform (Python standard library only)
 python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest"
+
+# Explicitly specifying English edition
+python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest" -l EN
 ```
 
 > [!NOTE]
@@ -263,7 +273,8 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 | [`README.md`](./README.md) | Japanese documentation |
 | [`README_EN.md`](./README_EN.md) | English documentation |
 | [`AGENTS.md`](./AGENTS.md) | **AI coding assistant setup protocol** (AI-setup-ready) |
-| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 / 6.0 unified template (trapper items & calculated fields) |
+| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 / 6.0 unified template (Japanese edition) |
+| [`Speedtest_EN.yaml`](./Speedtest_EN.yaml) | Zabbix 7.0 / 6.0 unified template (English edition / official submission) |
 | [`speedtest.ps1`](./speedtest.ps1) | Windows PowerShell sender (native TCP socket & ZabbixSender support) |
 | [`speedtest.bat`](./speedtest.bat) | Windows batch wrapper (auto-selects PowerShell 7 or 5.1) |
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Cross-platform Python sender (uses official `zabbix-utils`) |

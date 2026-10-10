@@ -154,19 +154,29 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 
 ## Zabbix テンプレートのインポートと設定
 
-テンプレート `Speedtest.yaml` は以下のいずれかの方法で Zabbix サーバーへ登録できます。
+テンプレートは利用環境（言語）に応じて以下の 2 種類を用意しています。
+- **日本語版**: `Speedtest.yaml`（アイテム名・トリガー名が日本語）
+- **英語版**: `Speedtest_EN.yaml`（公式コミュニティ提出準拠・全英語）
+
+以下のいずれかの方法で Zabbix サーバーへ登録できます。
 
 ### 方法 A: Zabbix API で自動インポート（推奨）
-同梱のインポートスクリプトを使用すると、Web ブラウザを開かずにテンプレートのインポートとホストへの紐付けが完了します。
+同梱のインポートスクリプトを使用すると、Web ブラウザを開かずにテンプレートのインポートとホストへの紐付けが完了します。言語は OS カルチャから自動判定されますが、明示指定（`-Language JA` / `-Language EN`）も可能です。
 
 ```powershell
-# Windows (PowerShell)
+# Windows (PowerShell) - 未指定時は OS 言語を自動判定
 .\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest"
+
+# 英語版テンプレートを明示してインポート
+.\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest" -Language EN
 ```
 
 ```bash
 # Linux / クロスプラットフォーム (Python 標準ライブラリのみで動作)
 python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest"
+
+# 英語版テンプレートを明示してインポート
+python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest" -l EN
 ```
 
 > [!NOTE]
@@ -262,7 +272,8 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 | ファイル | 役割・説明 |
 | :--- | :--- |
 | [`AGENTS.md`](./AGENTS.md) | **AI コーディングアシスタント向け対話指示書** (AI-setup-ready プロトコル) |
-| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 共通監視テンプレート (トラッパーアイテム群 & 自動計算) |
+| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 共通監視テンプレート (日本語版 / トラッパーアイテム群 & 自動計算) |
+| [`Speedtest_EN.yaml`](./Speedtest_EN.yaml) | Zabbix 7.0 共通監視テンプレート (英語版 / 公式提出準拠) |
 | [`speedtest.ps1`](./speedtest.ps1) | Windows 用 PowerShell 送信スクリプト (ソケット送信 / ZabbixSender 兼用) |
 | [`speedtest.bat`](./speedtest.bat) | Windows 用実行ラッパーバッチ (PowerShell 7 / 5.1 振り分け) |
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Linux / Windows 共通 Python 送信スクリプト (`zabbix-utils` 使用) |
