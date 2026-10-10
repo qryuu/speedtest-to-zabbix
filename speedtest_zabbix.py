@@ -140,7 +140,7 @@ def main():
     parser.add_argument("--config", "-c", default=None, help="Zabbix Agent 設定ファイルのパス (自動検出も可能)")
     parser.add_argument("--server", "-z", default=None, help="Zabbix サーバー IP またはホスト名")
     parser.add_argument("--port", "-p", type=int, default=None, help="Zabbix トラッパーポート (デフォルト: 10051)")
-    parser.add_argument("--host", "-s", default=None, help="Zabbix 上の登録ホスト名 (デフォルト: Speedtest)")
+    parser.add_argument("--host", "-s", default=None, help="Zabbix 上の登録ホスト名 (未指定時は conf -> デバイス名 -> SpeedtestHost)")
     parser.add_argument("--prefix", "-k", default="speedtest", help="アイテムキープレフィックス (デフォルト: speedtest)")
     parser.add_argument("--speedtest-path", default=None, help="speedtest コマンドのパス")
     parser.add_argument("--dry-run", action="store_true", help="Zabbix への送信を行わず結果を表示")
@@ -162,12 +162,23 @@ def main():
         else:
             server = os.getenv("ZABBIX_SERVER", "127.0.0.1")
 
+    # ホスト名の決定 (第1優先: 引数 -> 第2優先: zabbix_agentd.conf -> 第3優先: デバイス名 -> 第4優先: SpeedtestHost)
     if not host:
         if conf_settings and conf_settings.get("hostname"):
             host = conf_settings["hostname"]
             log(f"Zabbix Agent 設定ファイルからホスト名 ({host}) を検出しました。")
         else:
-            host = "Speedtest"
+            try:
+                import socket
+                device_host = socket.gethostname()
+            except Exception:
+                device_host = None
+            if device_host:
+                host = device_host
+                log(f"デバイスのマシン名 ({host}) をホスト名として採用しました。")
+            else:
+                host = "SpeedtestHost"
+                log(f"フォールバックホスト名 ({host}) を採用しました。")
 
     # 1. zabbix_utils の確認 (DryRun 以外)
     Sender = None

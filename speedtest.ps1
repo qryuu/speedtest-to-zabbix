@@ -51,7 +51,7 @@ param(
     [int]$ZabbixPort = 10051,
 
     [Parameter()]
-    [string]$Hostname = "Speedtest",
+    [string]$Hostname = "",
 
     [Parameter()]
     [string]$ItemPrefix = "speedtest",
@@ -146,9 +146,18 @@ if ([string]::IsNullOrWhiteSpace($ZabbixServer)) {
     }
 }
 
-if ($Hostname -eq "Speedtest" -and $null -ne $confSettings -and -not [string]::IsNullOrWhiteSpace($confSettings.Hostname)) {
-    $Hostname = $confSettings.Hostname
-    Write-Log "Zabbix Agent 設定ファイルからホスト名 ($Hostname) を検出しました。" "INFO"
+# ホスト名の決定 (第1優先: 引数 -> 第2優先: zabbix_agentd.conf -> 第3優先: マシン名 -> 第4優先: SpeedtestHost)
+if ([string]::IsNullOrWhiteSpace($Hostname)) {
+    if ($null -ne $confSettings -and -not [string]::IsNullOrWhiteSpace($confSettings.Hostname)) {
+        $Hostname = $confSettings.Hostname
+        Write-Log "Zabbix Agent 設定ファイルからホスト名 ($Hostname) を検出しました。" "INFO"
+    } elseif (-not [string]::IsNullOrWhiteSpace($env:COMPUTERNAME)) {
+        $Hostname = $env:COMPUTERNAME
+        Write-Log "デバイスのマシン名 ($Hostname) をホスト名として採用しました。" "INFO"
+    } else {
+        $Hostname = "SpeedtestHost"
+        Write-Log "フォールバックホスト名 ($Hostname) を採用しました。" "INFO"
+    }
 }
 
 # デフォルトパスの安全な解決 (PowerShell 5.1 互換)
