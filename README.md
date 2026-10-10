@@ -21,7 +21,6 @@ Windows 上で Ookla Speedtest CLI を定期実行し、計測結果をパース
 | :--- | :--- |
 | `speedtest.ps1` | メインの PowerShell スクリプト |
 | `speedtest.bat` | PowerShell スクリプトを実行するバッチラッパー |
-| `speadtest.bat` | 従来のバッチファイル名互換用ラッパー |
 | `speedtest.exe` | Ookla Speedtest CLI（Windows x64） |
 | `zabbix_sender.exe` | Zabbix Sender（Windows x64） |
 | `speedtest.md` | Speedtest CLI 公式ドキュメント |
