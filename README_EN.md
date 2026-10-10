@@ -4,6 +4,7 @@
 
 [![English](https://img.shields.io/badge/Language-English-blue.svg)](#)
 [![日本語](https://img.shields.io/badge/Language-%E6%97%A5%E6%9C%AC%E8%AA%9E-lightgrey.svg)](./README.md)
+[![Zabbix Community Template PR](https://img.shields.io/badge/Zabbix%20Community%20Template-PR%20%23863-orange.svg)](https://github.com/zabbix/community-templates/pull/863)
 
 </div>
 
@@ -12,6 +13,10 @@ A lightweight, robust toolset to run Ookla Speedtest CLI periodically on Windows
 > [!TIP]
 > **🤖 For AI Coding Assistants (AI-setup-ready)**:  
 > If you are using an AI assistant (Antigravity, Cursor, Claude Code, GitHub Copilot, etc.), simply ask: **"Set up this repository"**. The assistant will automatically inspect your environment, guide you through questions, run DryRun tests, register scheduler tasks, and import the Zabbix template. See [`AGENTS.md`](./AGENTS.md) for details.
+
+> [!NOTE]
+> **🏛️ Zabbix Community Template Submission**:  
+> This template has been submitted to the official Zabbix Community Templates repository: [zabbix/community-templates#863](https://github.com/zabbix/community-templates/pull/863).
 
 ---
 
