@@ -1,5 +1,12 @@
 # Speedtest to Zabbix
 
+<div align="right">
+
+[![日本語](https://img.shields.io/badge/Language-%E6%97%A5%E6%9C%AC%E8%AA%9E-blue.svg)](#)
+[![English](https://img.shields.io/badge/Language-English-lightgrey.svg)](./README_EN.md)
+
+</div>
+
 Windows および Linux 上で Ookla Speedtest CLI を定期実行し、回線計測結果をパースして Zabbix サーバーへ送信するツールセットです。
 
 > [!TIP]
@@ -255,5 +262,6 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 | [`setup.sh`](./setup.sh) | Linux 自動セットアップスクリプト (検証・cron 登録・テンプレート登録) |
 | [`import_template.ps1`](./import_template.ps1) | Zabbix API テンプレート自動登録スクリプト (PowerShell 版) |
 | [`import_template.py`](./import_template.py) | Zabbix API テンプレート自動登録スクリプト (Python 標準ライブラリ版) |
-| [`README.md`](./README.md) | プロジェクト仕様書・マニュアル |
+| [`README.md`](./README.md) | プロジェクト仕様書・マニュアル (日本語) |
+| [`README_EN.md`](./README_EN.md) | Project Documentation (English) |
 
