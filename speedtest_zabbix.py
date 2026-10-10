@@ -219,40 +219,22 @@ def main():
     log(f"  Loss     : {packet_loss} %")
     log(f"  URL      : {result_url}")
 
-    # 5. メトリクス一覧構築
-    prefix = args.prefix
-    metrics = {
-        f"{prefix}.ping.latency": ping_latency,
-        f"{prefix}.ping.jitter": ping_jitter,
-        f"{prefix}.download.bps": download_bps,
-        f"{prefix}.download.mbps": download_mbps,
-        f"{prefix}.upload.bps": upload_bps,
-        f"{prefix}.upload.mbps": upload_mbps,
-        f"{prefix}.download.bytes": data["download"].get("bytes", 0),
-        f"{prefix}.upload.bytes": data["upload"].get("bytes", 0),
-        f"{prefix}.packetloss": packet_loss,
-        f"{prefix}.server.name": server_name,
-        f"{prefix}.server.id": server_id,
-        f"{prefix}.result.url": result_url,
-        f"{prefix}.json": raw_json,
-    }
+    # 5. 送信データの生成 (Zabbix テンプレートのマスターアイテム speedtest.json 1件に統一)
+    master_key = f"{prefix}.json"
 
     # 6. 送信 / DryRun
     if args.dry_run:
         log("[DryRun] Zabbix への送信はスキップされました。")
-        log(f"[DryRun] 送信対象アイテム数: {len(metrics)} 件")
-        for k, v in metrics.items():
-            if k == f"{prefix}.json":
-                print(f"  Host: {host} | Key: {k} | Value: [RAW JSON {len(str(v))} 文字]")
-            else:
-                print(f"  Host: {host} | Key: {k} | Value: {v}")
+        log(f"[DryRun] 送信対象マスターアイテム: {master_key}")
+        print(f"  Host: {host} | Key: {master_key} | Payload: [RAW JSON {len(raw_json)} 文字]")
+        log("[DryRun] テンプレート側の DEPENDENT アイテム (JSONPATH) により全メトリクスが Zabbix 上で自動展開・計算されます。")
         return
 
-    # zabbix_utils で送信
+    # zabbix_utils で送信 (マスターアイテム 1件)
     sender = Sender(server=server, port=port)
-    packet = [ItemValue(host, k, str(v)) for k, v in metrics.items()]
+    packet = [ItemValue(host, master_key, raw_json)]
 
-    log(f"Zabbix サーバー ({server}:{port}) へ {len(packet)} 件のメトリクスを送信中 (Python / zabbix_utils)...")
+    log(f"Zabbix サーバー ({server}:{port}) へ計測結果 ({master_key}) を送信中 (Python / zabbix_utils)...")
     try:
         response = sender.send(packet)
         log(f"Zabbix サーバー応答: processed: {response.processed}; failed: {response.failed}; total: {response.total}; time: {response.time}")
