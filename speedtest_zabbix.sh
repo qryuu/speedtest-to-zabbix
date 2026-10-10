@@ -8,11 +8,12 @@
 
 set -euo pipefail
 
-# デフォルト設定 (環境変数または 127.0.0.1)
-ZABBIX_SERVER="${ZABBIX_SERVER:-127.0.0.1}"
+# デフォルト設定 (空の場合は自動解決)
+ZABBIX_SERVER="${ZABBIX_SERVER:-}"
 ZABBIX_PORT="${ZABBIX_PORT:-10051}"
-ZABBIX_HOST="${ZABBIX_HOST:-Speedtest}"
+ZABBIX_HOST="${ZABBIX_HOST:-}"
 ITEM_KEY="speedtest.json"
+CONFIG_FILE=""
 DRY_RUN=0
 MAX_RETRIES=3
 RETRY_DELAY=5
@@ -29,9 +30,10 @@ usage() {
 Usage: $(basename "$0") [OPTIONS]
 
 Options:
-  -z <server>    Zabbix サーバー IP またはホスト名 (デフォルト: ${ZABBIX_SERVER})
-  -p <port>      Zabbix トラッパーポート (デフォルト: ${ZABBIX_PORT})
-  -s <host>      Zabbix 上の登録ホスト名 (デフォルト: ${ZABBIX_HOST})
+  -c <config>    Zabbix Agent 設定ファイルのパス (自動検出も可能)
+  -z <server>    Zabbix サーバー IP またはホスト名
+  -p <port>      Zabbix トラッパーポート (デフォルト: 10051)
+  -s <host>      Zabbix 上の登録ホスト名 (デフォルト: Speedtest)
   -k <key>       マスターアイテムキー (デフォルト: ${ITEM_KEY})
   -d             DryRun (Zabbix への送信を行わず結果を表示)
   -h             このヘルプを表示
@@ -44,8 +46,9 @@ EOF
 }
 
 # コマンドライン引数のパース
-while getopts "z:p:s:k:dh" opt; do
+while getopts "c:z:p:s:k:dh" opt; do
     case "$opt" in
+        c) CONFIG_FILE="$OPTARG" ;;
         z) ZABBIX_SERVER="$OPTARG" ;;
         p) ZABBIX_PORT="$OPTARG" ;;
         s) ZABBIX_HOST="$OPTARG" ;;
@@ -55,6 +58,39 @@ while getopts "z:p:s:k:dh" opt; do
         *) usage ;;
     esac
 done
+
+# Zabbix Agent 設定ファイルからの自動解決
+if [ -z "$ZABBIX_SERVER" ] || [ -z "$ZABBIX_HOST" ]; then
+    CANDIDATES=("$CONFIG_FILE" "/etc/zabbix/zabbix_agentd.conf" "/etc/zabbix/zabbix_agent2.conf" "/usr/local/etc/zabbix_agentd.conf")
+    for conf in "${CANDIDATES[@]}"; do
+        if [ -n "$conf" ] && [ -f "$conf" ]; then
+            if [ -z "$ZABBIX_SERVER" ]; then
+                CONF_SERVER=$(grep -E '^(ServerActive|Server)=' "$conf" | head -n 1 | cut -d= -f2- | cut -d, -f1 | tr -d ' ' || true)
+                if [ -n "$CONF_SERVER" ]; then
+                    if echo "$CONF_SERVER" | grep -q ":"; then
+                        ZABBIX_SERVER=$(echo "$CONF_SERVER" | cut -d: -f1)
+                        [ "$ZABBIX_PORT" = "10051" ] && ZABBIX_PORT=$(echo "$CONF_SERVER" | cut -d: -f2)
+                    else
+                        ZABBIX_SERVER="$CONF_SERVER"
+                    fi
+                    log "INFO" "Zabbix Agent 設定ファイル ($conf) からサーバー ($ZABBIX_SERVER) を検出しました。"
+                fi
+            fi
+            if [ -z "$ZABBIX_HOST" ]; then
+                CONF_HOST=$(grep -E '^Hostname=' "$conf" | head -n 1 | cut -d= -f2- | cut -d, -f1 | tr -d ' ' || true)
+                if [ -n "$CONF_HOST" ]; then
+                    ZABBIX_HOST="$CONF_HOST"
+                    log "INFO" "Zabbix Agent 設定ファイルからホスト名 ($ZABBIX_HOST) を検出しました。"
+                fi
+            fi
+            break
+        fi
+    done
+fi
+
+# 最終フォールバック
+ZABBIX_SERVER="${ZABBIX_SERVER:-127.0.0.1}"
+ZABBIX_HOST="${ZABBIX_HOST:-Speedtest}"
 
 # 1. 依存コマンドのチェック
 if ! command -v speedtest >/dev/null 2>&1; then

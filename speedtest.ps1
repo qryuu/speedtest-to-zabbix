@@ -64,7 +64,7 @@ param(
     [switch]$DryRun,
 
     [Parameter()]
-    [bool]$SendRawJson = $true,
+    [string]$ConfigFile = "",
 
     [Parameter()]
     [string]$SpeedtestPath = "",
@@ -77,9 +77,78 @@ param(
 $OutputEncoding = [System.Text.Encoding]::UTF8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# Zabbix サーバーのデフォルト解決 (引数 -> 環境変数 -> 127.0.0.1)
+function Write-Log {
+    param([string]$Message, [string]$Level = "INFO")
+    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    Write-Host "[$timestamp] [$Level] $Message"
+}
+
+# Zabbix Agent 設定ファイル (zabbix_agentd.conf / zabbix_agent2.conf) のパース関数
+function Get-ZabbixAgentConfSettings {
+    param([string]$ExplicitPath)
+    [string[]]$candidatePaths = @(
+        $ExplicitPath,
+        "$env:ProgramFiles\Zabbix Agent\zabbix_agentd.conf",
+        "$env:ProgramFiles\Zabbix Agent 2\zabbix_agent2.conf",
+        "${env:ProgramFiles(x86)}\Zabbix Agent\zabbix_agentd.conf",
+        "C:\zabbix\zabbix_agentd.conf",
+        "C:\zabbix_agentd.conf"
+    ) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path -Path $_ -PathType Leaf) }
+
+    if ($candidatePaths.Length -eq 0) { return $null }
+    $foundPath = $candidatePaths[0]
+
+    $res = @{ Path = $foundPath; Server = $null; Port = $null; Hostname = $null }
+    try {
+        $lines = Get-Content -Path $foundPath -Encoding Default -ErrorAction Stop
+        foreach ($line in $lines) {
+            $trimmed = $line.Trim()
+            if ($trimmed.StartsWith("#") -or [string]::IsNullOrWhiteSpace($trimmed)) { continue }
+
+            # ServerActive=192.168.1.10:10051 (優先)
+            if ($trimmed -match '^ServerActive\s*=\s*(.+)$') {
+                $first = ($matches[1].Split(",")[0]).Trim()
+                if ($first -match '^([^:]+)(?::(\d+))?$') {
+                    $res.Server = $matches[1].Trim()
+                    if ($matches[2]) { $res.Port = [int]$matches[2] }
+                }
+            } elseif (-not $res.Server -and $trimmed -match '^Server\s*=\s*(.+)$') {
+                $first = ($matches[1].Split(",")[0]).Trim()
+                if ($first -match '^([^:]+)(?::(\d+))?$') {
+                    $res.Server = $matches[1].Trim()
+                    if ($matches[2]) { $res.Port = [int]$matches[2] }
+                }
+            }
+            if ($trimmed -match '^Hostname\s*=\s*(.+)$') {
+                $res.Hostname = ($matches[1].Split(",")[0]).Trim()
+            }
+        }
+    } catch {
+        return $null
+    }
+    return $res
+}
+
+# Zabbix サーバーとホスト名の自動解決 (引数 -> zabbix_agentd.conf -> 環境変数 -> デフォルト値)
+$confSettings = Get-ZabbixAgentConfSettings -ExplicitPath $ConfigFile
+
 if ([string]::IsNullOrWhiteSpace($ZabbixServer)) {
-    $ZabbixServer = if ($env:ZABBIX_SERVER) { $env:ZABBIX_SERVER } else { "127.0.0.1" }
+    if ($null -ne $confSettings -and -not [string]::IsNullOrWhiteSpace($confSettings.Server)) {
+        $ZabbixServer = $confSettings.Server
+        if ($null -ne $confSettings.Port -and $ZabbixPort -eq 10051) {
+            $ZabbixPort = $confSettings.Port
+        }
+        Write-Log "Zabbix Agent 設定ファイル ($($confSettings.Path)) から送信先サーバー ($ZabbixServer) を検出しました。" "INFO"
+    } elseif ($env:ZABBIX_SERVER) {
+        $ZabbixServer = $env:ZABBIX_SERVER
+    } else {
+        $ZabbixServer = "127.0.0.1"
+    }
+}
+
+if ($Hostname -eq "Speedtest" -and $null -ne $confSettings -and -not [string]::IsNullOrWhiteSpace($confSettings.Hostname)) {
+    $Hostname = $confSettings.Hostname
+    Write-Log "Zabbix Agent 設定ファイルからホスト名 ($Hostname) を検出しました。" "INFO"
 }
 
 # デフォルトパスの安全な解決 (PowerShell 5.1 互換)
@@ -101,12 +170,6 @@ if ([string]::IsNullOrWhiteSpace($ZabbixSenderPath)) {
     } else {
         $ZabbixSenderPath = Join-Path $PSScriptRoot "zabbix_sender.exe"
     }
-}
-
-function Write-Log {
-    param([string]$Message, [string]$Level = "INFO")
-    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    Write-Host "[$timestamp] [$Level] $Message"
 }
 
 # .NET ソケットを使用した Zabbix トラッパー直接送信関数 (外部バイナリ不要)

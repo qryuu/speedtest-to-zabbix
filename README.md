@@ -51,14 +51,27 @@ Windows および Linux 上で Ookla Speedtest CLI を定期実行し、回線�
 
 ## 使い方
 
-### Zabbix サーバーの設定方法（パラメータ優先順位）
-各スクリプトとも、送信先 Zabbix サーバーは以下の優先順位で自動解決されます：
-1. **コマンドライン引数**（最優先）: `-ZabbixServer` (PowerShell) / `--server` (Python) / `-z` (Shell)
-2. **環境変数 `ZABBIX_SERVER`**: システムまたはセッションに設定されている場合
-3. **デフォルト値**: **`127.0.0.1`**（ローカルホスト）
+### Zabbix サーバーおよび設定の自動検出（優先順位）
+各スクリプトとも、送信先 Zabbix サーバー・ポート・ホスト名は以下の優先順位で自動解決されます。**Zabbix Agent が既に導入されている環境では完全なゼロコンフィグ（設定不要）で動作**し、**Agent 未導入の環境でも引数や環境変数により単体で動作**します：
+
+1. **コマンドライン引数（最優先）**:
+   - サーバー指定: `-ZabbixServer` (PowerShell) / `--server` (Python) / `-z` (Shell)
+   - ポート指定: `-ZabbixPort` / `--port` / `-p`
+   - ホスト名指定: `-Hostname` / `--host` / `-s`
+2. **Zabbix Agent 設定ファイルからの自動読取**:
+   - 明示指定: `-ConfigFile` (PowerShell) / `--config` (Python) / `-c` (Shell)
+   - 自動探索パス:
+     - **Windows**: `%ProgramFiles%\Zabbix Agent\zabbix_agentd.conf`, `%ProgramFiles%\Zabbix Agent 2\zabbix_agent2.conf`, `C:\zabbix\zabbix_agentd.conf` など
+     - **Linux**: `/etc/zabbix/zabbix_agentd.conf`, `/etc/zabbix/zabbix_agent2.conf`, `/usr/local/etc/zabbix_agentd.conf`
+   - 設定ファイル内の `ServerActive`（アクティブ送信先、優先）または `Server`（パッシブ設定）からサーバー IP / ポートを取得し、`Hostname` も自動抽出します。
+3. **環境変数**: `ZABBIX_SERVER`, `ZABBIX_PORT`, `ZABBIX_HOST`
+4. **デフォルト値**:
+   - サーバー: **`127.0.0.1`**（ローカルホスト）
+   - ポート: **`10051`**
+   - ホスト名: **`Speedtest`**
 
 ```bash
-# 環境変数で事前に指定しておく例 (推奨)
+# Agent 未導入環境などで環境変数を事前指定しておく例
 export ZABBIX_SERVER="192.168.1.10"       # Linux / macOS
 $env:ZABBIX_SERVER = "192.168.1.10"       # PowerShell
 ```
