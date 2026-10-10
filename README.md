@@ -95,6 +95,7 @@ speedtest.bat -DryRun
    - 毎日、または「繰り返し間隔: 1時間」など任意の頻度を設定。
 5. **操作**:
    - 操作: `プログラムの開始`
-   - プログラム/スクリプト: `powershell.exe`
+   - プログラム/スクリプト: `pwsh.exe`（PowerShell 7 系）または `powershell.exe`（5.1 系）
+     ※または直接バッチファイルを指定: `C:\Path\To\speeadtest_bat\speedtest.bat`
    - 引数の追加: `-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Path\To\speeadtest_bat\speedtest.ps1"`
    - 開始 (オプション): `C:\Path\To\speeadtest_bat`
