@@ -1,12 +1,12 @@
 ﻿<#
 .SYNOPSIS
-    Ookla Speedtest CLI を実行し、計測結果をパースして Zabbix サーバーへ一括送信するスクリプト。
+    Ookla Speedtest CLI を実行し、計測結果をパースして Zabbix サーバーへ送信するスクリプト。
 
 .DESCRIPTION
-    speedtest.exe の JSON 出力からメトリクスを抽出・計算し、
-    zabbix_sender.exe の一括入力形式 (-i) を使って 1 回の通信で全メトリクスを送信します。
-    Zabbix 側では speedtest.json (RAW JSON) のトラッパーアイテム、または個別のメトリクスキーの
-    どちらでも受信可能です。
+    speedtest.exe の JSON 出力からメトリクスを抽出・計算し、Zabbix サーバーへ一括送信します。
+    送信方式として以下の2通りを選択可能です:
+      1. PowerShell ネイティブソケット方式 (デフォルト: zabbix_sender.exe 不要)
+      2. ZabbixSender 方式 (外部の zabbix_sender.exe バイナリを使用)
 
 .PARAMETER ZabbixServer
     送信先 Zabbix サーバーの IP またはホスト名 (デフォルト: 52.194.38.180)
@@ -20,6 +20,9 @@
 .PARAMETER ItemPrefix
     アイテムキーのプレフィックス (デフォルト: speedtest)
 
+.PARAMETER SendMethod
+    送信方式: "PowerShell" (ネイティブソケット) または "ZabbixSender" (デフォルト: PowerShell)
+
 .PARAMETER DryRun
     Zabbix への送信を行わず、パースされたメトリクスと送信予定データをコンソールに表示します。
 
@@ -31,8 +34,12 @@
     Zabbix へ送信せずに計測とパースの動作確認を行います。
 
 .EXAMPLE
-    .\speedtest.ps1
-    デフォルト設定で Speedtest を実行し、Zabbix サーバーへ結果を送信します。
+    .\speedtest.ps1 -SendMethod PowerShell
+    外部バイナリ不要で、PowerShell ネイティブの TCP ソケット通信で Zabbix サーバーへ送信します。
+
+.EXAMPLE
+    .\speedtest.ps1 -SendMethod ZabbixSender
+    zabbix_sender.exe を使用して Zabbix サーバーへ送信します。
 #>
 
 [CmdletBinding()]
@@ -48,6 +55,10 @@ param(
 
     [Parameter()]
     [string]$ItemPrefix = "speedtest",
+
+    [Parameter()]
+    [ValidateSet("PowerShell", "ZabbixSender")]
+    [string]$SendMethod = "PowerShell",
 
     [Parameter()]
     [switch]$DryRun,
@@ -68,10 +79,23 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 
 # デフォルトパスの安全な解決 (PowerShell 5.1 互換)
 if ([string]::IsNullOrWhiteSpace($SpeedtestPath)) {
-    $SpeedtestPath = Join-Path $PSScriptRoot "speedtest.exe"
+    # カレント/スクリプト配置先、または PATH から検索
+    if (Test-Path (Join-Path $PSScriptRoot "speedtest.exe")) {
+        $SpeedtestPath = Join-Path $PSScriptRoot "speedtest.exe"
+    } elseif (Get-Command speedtest.exe -ErrorAction SilentlyContinue) {
+        $SpeedtestPath = (Get-Command speedtest.exe).Source
+    } else {
+        $SpeedtestPath = Join-Path $PSScriptRoot "speedtest.exe"
+    }
 }
 if ([string]::IsNullOrWhiteSpace($ZabbixSenderPath)) {
-    $ZabbixSenderPath = Join-Path $PSScriptRoot "zabbix_sender.exe"
+    if (Test-Path (Join-Path $PSScriptRoot "zabbix_sender.exe")) {
+        $ZabbixSenderPath = Join-Path $PSScriptRoot "zabbix_sender.exe"
+    } elseif (Get-Command zabbix_sender.exe -ErrorAction SilentlyContinue) {
+        $ZabbixSenderPath = (Get-Command zabbix_sender.exe).Source
+    } else {
+        $ZabbixSenderPath = Join-Path $PSScriptRoot "zabbix_sender.exe"
+    }
 }
 
 function Write-Log {
@@ -80,18 +104,82 @@ function Write-Log {
     Write-Host "[$timestamp] [$Level] $Message"
 }
 
-# 1. 実行ファイルの存在確認
-if (-not (Test-Path $SpeedtestPath)) {
-    Write-Log "speedtest.exe が見つかりません: $SpeedtestPath" "ERROR"
-    exit 1
+# .NET ソケットを使用した Zabbix トラッパー直接送信関数 (外部バイナリ不要)
+function Send-ZabbixSocketNative {
+    param(
+        [string]$Server,
+        [int]$Port,
+        [array]$DataList
+    )
+    $payloadObj = @{
+        request = "sender data"
+        data    = $DataList
+    }
+    $json = $payloadObj | ConvertTo-Json -Compress -Depth 5
+    $jsonBytes = [System.Text.Encoding]::UTF8.GetBytes($json)
+    $dataLen = [uint64]$jsonBytes.Length
+
+    # Zabbix プロトコルヘッダー: 'ZBXD\x01' (5 bytes) + データ長 (8 bytes Little Endian)
+    $headerBytes = [byte[]]@(0x5A, 0x42, 0x58, 0x44, 0x01)
+    $lenBytes = [BitConverter]::GetBytes($dataLen)
+
+    $tcpClient = [System.Net.Sockets.TcpClient]::new()
+    $tcpClient.SendTimeout = 10000
+    $tcpClient.ReceiveTimeout = 10000
+
+    try {
+        $tcpClient.Connect($Server, $Port)
+        $stream = $tcpClient.GetStream()
+        $stream.Write($headerBytes, 0, $headerBytes.Length)
+        $stream.Write($lenBytes, 0, $lenBytes.Length)
+        $stream.Write($jsonBytes, 0, $jsonBytes.Length)
+        $stream.Flush()
+
+        # レスポンスヘッダー受信 (13 bytes)
+        $respHeader = New-Object byte[] 13
+        $bytesRead = 0
+        while ($bytesRead -lt 13) {
+            $chunk = $stream.Read($respHeader, $bytesRead, 13 - $bytesRead)
+            if ($chunk -le 0) { break }
+            $bytesRead += $chunk
+        }
+
+        if ($bytesRead -ge 13) {
+            $respLen = [BitConverter]::ToUInt64($respHeader, 5)
+            $respBytes = New-Object byte[] $respLen
+            $readTotal = 0
+            while ($readTotal -lt $respLen) {
+                $chunk = $stream.Read($respBytes, $readTotal, [int]($respLen - $readTotal))
+                if ($chunk -le 0) { break }
+                $readTotal += $chunk
+            }
+            return [System.Text.Encoding]::UTF8.GetString($respBytes, 0, $readTotal)
+        }
+        return $null
+    } finally {
+        if ($null -ne $tcpClient) {
+            $tcpClient.Close()
+        }
+    }
 }
-if (-not $DryRun -and -not (Test-Path $ZabbixSenderPath)) {
-    Write-Log "zabbix_sender.exe が見つかりません: $ZabbixSenderPath" "ERROR"
+
+# 1. 実行ファイルの存在確認
+if (-not (Test-Path $SpeedtestPath) -and -not (Get-Command $SpeedtestPath -ErrorAction SilentlyContinue)) {
+    Write-Log "speedtest CLI が見つかりません: $SpeedtestPath" "ERROR"
+    Write-Log "公式ダウンロードサイトから speedtest.exe をダウンロードして配置してください: https://www.speedtest.net/ja/apps/cli" "ERROR"
     exit 1
 }
 
+if (-not $DryRun -and $SendMethod -eq "ZabbixSender") {
+    if (-not (Test-Path $ZabbixSenderPath) -and -not (Get-Command $ZabbixSenderPath -ErrorAction SilentlyContinue)) {
+        Write-Log "zabbix_sender.exe が見つかりません: $ZabbixSenderPath" "ERROR"
+        Write-Log "公式配布元からダウンロードするか、PowerShell ネイティブ方式 (-SendMethod PowerShell) をご利用ください。" "ERROR"
+        exit 1
+    }
+}
+
 # 2. Speedtest CLI の実行
-Write-Log "Speedtest CLI を実行中..."
+Write-Log "Speedtest CLI を実行中 ($SpeedtestPath)..."
 try {
     $rawOutput = & $SpeedtestPath --format=json --accept-license --accept-gdpr 2>&1
 } catch {
@@ -100,7 +188,6 @@ try {
 }
 
 # 3. JSON 行の抽出とパース
-# ライセンス同意メッセージや空行をスキップし、有効な JSON 行を特定
 $jsonLine = $rawOutput | Where-Object { $_ -match '^\s*\{.*"type"\s*:\s*"result"' } | Select-Object -Last 1
 
 if (-not $jsonLine) {
@@ -118,7 +205,6 @@ try {
 }
 
 # 4. メトリクスの計算・抽出
-# Speedtest CLI の bandwidth は Byte/sec なので、8倍して bps を算出
 $downloadBps = [math]::Round([double]$data.download.bandwidth * 8, 0)
 $downloadMbps = [math]::Round(($downloadBps / 1000000), 2)
 
@@ -141,72 +227,102 @@ Write-Log "  Upload   : $uploadMbps Mbps ($uploadBps bps)"
 Write-Log "  Loss     : $packetLoss %"
 Write-Log "  URL      : $($data.result.url)"
 
-# 5. Zabbix 送信レコードの生成 (タブ区切り: <host>\t<key>\t<value>)
-$records = [System.Collections.Generic.List[string]]::new()
+# 5. 送信データの生成
+$itemsList = [System.Collections.Generic.List[hashtable]]::new()
+$tsvRecords = [System.Collections.Generic.List[string]]::new()
 
-$records.Add("$Hostname`t$ItemPrefix.ping.latency`t$pingLatency")
-$records.Add("$Hostname`t$ItemPrefix.ping.jitter`t$pingJitter")
-$records.Add("$Hostname`t$ItemPrefix.download.bps`t$downloadBps")
-$records.Add("$Hostname`t$ItemPrefix.download.mbps`t$downloadMbps")
-$records.Add("$Hostname`t$ItemPrefix.upload.bps`t$uploadBps")
-$records.Add("$Hostname`t$ItemPrefix.upload.mbps`t$uploadMbps")
-$records.Add("$Hostname`t$ItemPrefix.download.bytes`t$($data.download.bytes)")
-$records.Add("$Hostname`t$ItemPrefix.upload.bytes`t$($data.upload.bytes)")
-$records.Add("$Hostname`t$ItemPrefix.packetloss`t$packetLoss")
-$records.Add("$Hostname`t$ItemPrefix.server.name`t$($data.server.name)")
-$records.Add("$Hostname`t$ItemPrefix.server.id`t$($data.server.id)")
-$records.Add("$Hostname`t$ItemPrefix.result.url`t$($data.result.url)")
+function Add-Metric {
+    param([string]$KeySuffix, [string]$Value)
+    $fullKey = "$ItemPrefix.$KeySuffix"
+    $itemsList.Add(@{ host = $Hostname; key = $fullKey; value = $Value })
+    $tsvRecords.Add("$Hostname`t$fullKey`t$Value")
+}
 
-# 生の JSON (改行なしの1行) も送信対象に含める場合 (ItemKey: speedtest.json)
+Add-Metric "ping.latency" $pingLatency
+Add-Metric "ping.jitter" $pingJitter
+Add-Metric "download.bps" $downloadBps
+Add-Metric "download.mbps" $downloadMbps
+Add-Metric "upload.bps" $uploadBps
+Add-Metric "upload.mbps" $uploadMbps
+Add-Metric "download.bytes" "$($data.download.bytes)"
+Add-Metric "upload.bytes" "$($data.upload.bytes)"
+Add-Metric "packetloss" $packetLoss
+Add-Metric "server.name" "$($data.server.name)"
+Add-Metric "server.id" "$($data.server.id)"
+Add-Metric "result.url" "$($data.result.url)"
+
 if ($SendRawJson) {
     $compactJson = ($jsonLine -replace "[\r\n]+", "").Trim()
-    $records.Add("$Hostname`t$ItemPrefix.json`t$compactJson")
+    Add-Metric "json" $compactJson
 }
 
 # 6. 送信処理 / DryRun 処理
 if ($DryRun) {
     Write-Log "[DryRun] Zabbix サーバーへの送信はスキップされました。"
-    Write-Log "[DryRun] 送信対象レコード一覧 ($($records.Count) 件):"
-    foreach ($rec in $records) {
-        $parts = $rec.Split("`t")
-        if ($parts[1] -eq "$ItemPrefix.json") {
-            Write-Host "  Host: $($parts[0]) | Key: $($parts[1]) | Value: [RAW JSON $(($parts[2]).Length) 文字]"
+    Write-Log "[DryRun] 送信方式: $SendMethod | 送信対象メトリクス数: $($itemsList.Count) 件"
+    foreach ($item in $itemsList) {
+        if ($item.key -eq "$ItemPrefix.json") {
+            Write-Host "  Host: $($item.host) | Key: $($item.key) | Value: [RAW JSON $($item.value.Length) 文字]"
         } else {
-            Write-Host "  Host: $($parts[0]) | Key: $($parts[1]) | Value: $($parts[2])"
+            Write-Host "  Host: $($item.host) | Key: $($item.key) | Value: $($item.value)"
         }
     }
     exit 0
 }
 
-# 一時ファイルを作成して Zabbix Sender (-i) で一括送信
-$tempFile = [System.IO.Path]::GetTempFileName()
-try {
-    # UTF-8 (BOMなし) で一時ファイルに書き込み
-    [System.IO.File]::WriteAllLines($tempFile, $records, (New-Object System.Text.UTF8Encoding($false)))
+Write-Log "Zabbix サーバー ($($ZabbixServer):$($ZabbixPort)) へ $($itemsList.Count) 件のメトリクスを送信中 (送信方式: $SendMethod)..."
 
-    Write-Log "Zabbix サーバー ($($ZabbixServer):$($ZabbixPort)) へ $($records.Count) 件のメトリクスを送信中..."
-    $senderOutput = & $ZabbixSenderPath -z $ZabbixServer -p $ZabbixPort -i $tempFile 2>&1
-    Write-Log "Zabbix Sender 出力:"
-    $senderOutput | ForEach-Object { Write-Log "  $_" }
-
-    # processed: X; failed: Y; total: Z の結果を確認
-    $statusLine = ($senderOutput | Out-String)
-    if ($statusLine -match "processed:\s*(\d+);\s*failed:\s*(\d+)") {
-        $processed = [int]$matches[1]
-        $failed = [int]$matches[2]
-        if ($failed -gt 0 -and $processed -gt 0) {
-            Write-Log "一部のメトリクスが送信されました (成功: $processed 件, 未登録/失敗: $failed 件)。個別アイテムキーを Zabbix 側に登録すると全件記録されます。" "INFO"
-        } elseif ($failed -gt 0 -and $processed -eq 0) {
-            Write-Log "全アイテムの送信に失敗しました (成功: 0 件, 失敗: $failed 件)。Zabbix 側のホスト名やアイテムキーを確認してください。" "WARN"
+if ($SendMethod -eq "PowerShell") {
+    # --- 方式1: PowerShell ネイティブソケット送信 ---
+    try {
+        $respJson = Send-ZabbixSocketNative -Server $ZabbixServer -Port $ZabbixPort -DataList $itemsList
+        if ($null -ne $respJson) {
+            Write-Log "Zabbix サーバー応答: $respJson"
+            if ($respJson -match "processed:\s*(\d+);\s*failed:\s*(\d+)") {
+                $processed = [int]$matches[1]
+                $failed = [int]$matches[2]
+                if ($failed -gt 0 -and $processed -gt 0) {
+                    Write-Log "一部のメトリクスが送信されました (成功: $processed 件, 未登録: $failed 件)。" "INFO"
+                } elseif ($failed -gt 0 -and $processed -eq 0) {
+                    Write-Log "全アイテムの送信に失敗しました (成功: 0 件, 失敗: $failed 件)。Zabbix 側のホスト名やアイテムキーを確認してください。" "WARN"
+                } else {
+                    Write-Log "全メトリクスが正常に送信されました (成功: $processed 件)。" "INFO"
+                }
+            }
         } else {
-            Write-Log "全メトリクスが正常に送信されました (成功: $processed 件)。" "INFO"
+            Write-Log "Zabbix サーバーからの応答を受信できませんでした。" "WARN"
         }
+    } catch {
+        Write-Log "PowerShell ソケット送信中にエラーが発生しました: $_" "ERROR"
+        exit 1
     }
-} catch {
-    Write-Log "Zabbix Sender の実行中にエラーが発生しました: $_" "ERROR"
-    exit 1
-} finally {
-    if (Test-Path $tempFile) {
-        Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+} else {
+    # --- 方式2: ZabbixSender 外部バイナリ送信 ---
+    $tempFile = [System.IO.Path]::GetTempFileName()
+    try {
+        [System.IO.File]::WriteAllLines($tempFile, $tsvRecords, (New-Object System.Text.UTF8Encoding($false)))
+        $senderOutput = & $ZabbixSenderPath -z $ZabbixServer -p $ZabbixPort -i $tempFile 2>&1
+        Write-Log "Zabbix Sender 出力:"
+        $senderOutput | ForEach-Object { Write-Log "  $_" }
+
+        $statusLine = ($senderOutput | Out-String)
+        if ($statusLine -match "processed:\s*(\d+);\s*failed:\s*(\d+)") {
+            $processed = [int]$matches[1]
+            $failed = [int]$matches[2]
+            if ($failed -gt 0 -and $processed -gt 0) {
+                Write-Log "一部のメトリクスが送信されました (成功: $processed 件, 未登録: $failed 件)。" "INFO"
+            } elseif ($failed -gt 0 -and $processed -eq 0) {
+                Write-Log "全アイテムの送信に失敗しました (成功: 0 件, 失敗: $failed 件)。Zabbix 側のホスト名やアイテムキーを確認してください。" "WARN"
+            } else {
+                Write-Log "全メトリクスが正常に送信されました (成功: $processed 件)。" "INFO"
+            }
+        }
+    } catch {
+        Write-Log "Zabbix Sender の実行中にエラーが発生しました: $_" "ERROR"
+        exit 1
+    } finally {
+        if (Test-Path $tempFile) {
+            Remove-Item -Path $tempFile -Force -ErrorAction SilentlyContinue
+        }
     }
 }
