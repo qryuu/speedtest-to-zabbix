@@ -221,10 +221,10 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 - **プログラム/スクリプト**: `pwsh.exe`（または `powershell.exe`）
 - **引数の追加**:
   ```powershell
-  -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Path\To\speeadtest_bat\speedtest.ps1"
+  -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
   ```
-- **開始**: `C:\Path\To\speeadtest_bat`
-- （※Python 方式の場合は、プログラムに `pythonw.exe`、引数に `C:\Path\To\speeadtest_bat\speedtest_zabbix.py` を指定）
+- **開始**: `C:\Path\To\speedtest-to-zabbix`
+- （※Python 方式の場合は、プログラムに `pythonw.exe`、引数に `C:\Path\To\speedtest-to-zabbix\speedtest_zabbix.py` を指定）
 
 #### Linux (cron)
 
