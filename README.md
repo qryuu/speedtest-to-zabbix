@@ -4,6 +4,7 @@
 
 [![日本語](https://img.shields.io/badge/Language-%E6%97%A5%E6%9C%AC%E8%AA%9E-blue.svg)](#)
 [![English](https://img.shields.io/badge/Language-English-lightgrey.svg)](./README_EN.md)
+[![Zabbix Community Template PR](https://img.shields.io/badge/Zabbix%20Community%20Template-PR%20%23863-orange.svg)](https://github.com/zabbix/community-templates/pull/863)
 
 </div>
 
@@ -12,6 +13,10 @@ Windows および Linux 上で Ookla Speedtest CLI を定期実行し、回線�
 > [!TIP]
 > **🤖 AI コーディングアシスタントをご利用の場合 (AI-setup-ready)**:  
 > Antigravity, Cursor, Claude Code, GitHub Copilot などの AI アシスタントに対して**「このリポジトリをセットアップして」**と伝えるだけで、対話形式で環境判定・動作テスト・タスク登録・テンプレートインポートまで自動完了します。詳細は [`AGENTS.md`](./AGENTS.md) をご覧ください。
+
+> [!NOTE]
+> **🏛️ Zabbix 公式コミュニティテンプレート申請中**:  
+> 本リポジトリのテンプレートは、Zabbix 公式コミュニティテンプレートリポジトリ（[zabbix/community-templates#863](https://github.com/zabbix/community-templates/pull/863)）へ寄稿・申請中です。
 
 ---
 
