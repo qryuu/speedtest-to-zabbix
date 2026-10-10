@@ -39,7 +39,7 @@ param(
     [string]$ZabbixServer = "",
 
     [Parameter()]
-    [string]$Hostname = "Speedtest",
+    [string]$Hostname = "",
 
     [Parameter()]
     [ValidateSet("Hourly", "Daily", "None")]
@@ -62,7 +62,38 @@ function Write-Log {
 
 Write-Log "=== Speedtest to Zabbix Setup Wizard ===" "INFO"
 
-# 1. speedtest.exe の確認
+# 1. ホスト名の解決 (第1優先: 引数 -> 第2優先: zabbix_agentd.conf -> 第3優先: マシン名 -> 第4優先: SpeedtestHost)
+$resolvedHost = $Hostname
+if ([string]::IsNullOrWhiteSpace($resolvedHost)) {
+    [string[]]$candidatePaths = @(
+        "$env:ProgramFiles\Zabbix Agent\zabbix_agentd.conf",
+        "$env:ProgramFiles\Zabbix Agent 2\zabbix_agent2.conf",
+        "${env:ProgramFiles(x86)}\Zabbix Agent\zabbix_agentd.conf",
+        "C:\zabbix\zabbix_agentd.conf"
+    ) | Where-Object { Test-Path $_ -PathType Leaf }
+    if ($candidatePaths.Length -gt 0) {
+        $cLines = Get-Content $candidatePaths[0] -Encoding Default -ErrorAction SilentlyContinue
+        foreach ($l in $cLines) {
+            if ($l.Trim() -match '^Hostname\s*=\s*(.+)$') {
+                $resolvedHost = ($matches[1].Split(",")[0]).Trim()
+                Write-Log "Zabbix Agent 設定ファイルからホスト名 ($resolvedHost) を検出しました。" "INFO"
+                break
+            }
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($resolvedHost) -and -not [string]::IsNullOrWhiteSpace($env:COMPUTERNAME)) {
+        $resolvedHost = $env:COMPUTERNAME
+        Write-Log "デバイスのマシン名 ($resolvedHost) をホスト名として採用しました。" "INFO"
+    }
+    if ([string]::IsNullOrWhiteSpace($resolvedHost)) {
+        $resolvedHost = "SpeedtestHost"
+        Write-Log "フォールバックホスト名 ($resolvedHost) を採用しました。" "INFO"
+    }
+} else {
+    Write-Log "指定されたホスト名 ($resolvedHost) を使用します。" "INFO"
+}
+
+# 2. speedtest.exe の確認
 $speedtestExe = Join-Path $PSScriptRoot "speedtest.exe"
 if (-not (Test-Path $speedtestExe) -and -not (Get-Command speedtest.exe -ErrorAction SilentlyContinue)) {
     Write-Log "speedtest CLI が見つかりません。" "ERROR"
@@ -72,14 +103,11 @@ if (-not (Test-Path $speedtestExe) -and -not (Get-Command speedtest.exe -ErrorAc
 }
 Write-Log "speedtest CLI を検出しました。" "INFO"
 
-# 2. 動作検証 (DryRun)
+# 3. 動作検証 (DryRun)
 Write-Log "動作確認 (DryRun) を実行中..." "INFO"
-$testArgs = @("-DryRun")
+$testArgs = @("-DryRun", "-Hostname", $resolvedHost)
 if (-not [string]::IsNullOrWhiteSpace($ZabbixServer)) {
     $testArgs += @("-ZabbixServer", $ZabbixServer)
-}
-if (-not [string]::IsNullOrWhiteSpace($Hostname)) {
-    $testArgs += @("-Hostname", $Hostname)
 }
 
 & (Join-Path $PSScriptRoot "speedtest.ps1") @testArgs
@@ -89,18 +117,18 @@ if ($LASTEXITCODE -ne 0) {
 }
 Write-Log "DryRun 検証が正常に完了しました。" "INFO"
 
-# 3. テンプレートのインポート (URL と API トークンが提供された場合)
+# 4. テンプレートのインポート (URL と API トークンが提供された場合)
 if (-not [string]::IsNullOrWhiteSpace($ZabbixUrl) -and -not [string]::IsNullOrWhiteSpace($ApiToken)) {
     Write-Log "Zabbix サーバーへテンプレートをインポート中..." "INFO"
     $importArgs = @(
         "-ZabbixUrl", $ZabbixUrl,
         "-ApiToken", $ApiToken,
-        "-LinkToHost", $Hostname
+        "-LinkToHost", $resolvedHost
     )
     & (Join-Path $PSScriptRoot "import_template.ps1") @importArgs
 }
 
-# 4. タスクスケジューラへの自動登録
+# 5. タスクスケジューラへの自動登録
 if ($Schedule -ne "None") {
     $taskName = "Speedtest-to-Zabbix"
     Write-Log "タスクスケジューラにタスク '$taskName' を登録中 (スケジュール: $Schedule)..." "INFO"
@@ -109,12 +137,9 @@ if ($Schedule -ne "None") {
     $psExePath = if ($pwshExe) { "pwsh.exe" } else { "powershell.exe" }
 
     $scriptPath = Join-Path $PSScriptRoot "speedtest.ps1"
-    $actionArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`""
+    $actionArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`" -Hostname `"$resolvedHost`""
     if (-not [string]::IsNullOrWhiteSpace($ZabbixServer)) {
         $actionArgs += " -ZabbixServer `"$ZabbixServer`""
-    }
-    if (-not [string]::IsNullOrWhiteSpace($Hostname) -and $Hostname -ne "Speedtest") {
-        $actionArgs += " -Hostname `"$Hostname`""
     }
 
     $schArgs = @("/create", "/tn", $taskName, "/tr", "$psExePath $actionArgs", "/f")

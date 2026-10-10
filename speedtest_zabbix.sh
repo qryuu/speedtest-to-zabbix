@@ -33,7 +33,7 @@ Options:
   -c <config>    Zabbix Agent 設定ファイルのパス (自動検出も可能)
   -z <server>    Zabbix サーバー IP またはホスト名
   -p <port>      Zabbix トラッパーポート (デフォルト: 10051)
-  -s <host>      Zabbix 上の登録ホスト名 (デフォルト: Speedtest)
+  -s <host>      Zabbix 上の登録ホスト名 (未指定時は conf -> デバイス名 -> SpeedtestHost)
   -k <key>       マスターアイテムキー (デフォルト: ${ITEM_KEY})
   -d             DryRun (Zabbix への送信を行わず結果を表示)
   -h             このヘルプを表示
@@ -88,9 +88,20 @@ if [ -z "$ZABBIX_SERVER" ] || [ -z "$ZABBIX_HOST" ]; then
     done
 fi
 
-# 最終フォールバック
+# ホスト名の決定 (第1優先: 引数 -> 第2優先: conf -> 第3優先: デバイス名 -> 第4優先: SpeedtestHost)
+if [ -z "$ZABBIX_HOST" ]; then
+    DEVICE_HOST=$(hostname -s 2>/dev/null || hostname 2>/dev/null || uname -n 2>/dev/null || true)
+    if [ -n "$DEVICE_HOST" ]; then
+        ZABBIX_HOST="$DEVICE_HOST"
+        log "INFO" "デバイスのマシン名 ($ZABBIX_HOST) をホスト名として採用しました。"
+    else
+        ZABBIX_HOST="SpeedtestHost"
+        log "INFO" "フォールバックホスト名 ($ZABBIX_HOST) を採用しました。"
+    fi
+fi
+
+# サーバーの最終フォールバック
 ZABBIX_SERVER="${ZABBIX_SERVER:-127.0.0.1}"
-ZABBIX_HOST="${ZABBIX_HOST:-Speedtest}"
 
 # 1. 依存コマンドのチェック
 if ! command -v speedtest >/dev/null 2>&1; then
