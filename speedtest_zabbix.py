@@ -84,15 +84,90 @@ def run_speedtest(speedtest_cmd, max_retries=3, retry_delay=5):
     sys.exit(1)
 
 
+def get_zabbix_agent_conf_settings(custom_path=None):
+    candidates = []
+    if custom_path:
+        candidates.append(custom_path)
+    if sys.platform == "win32":
+        candidates.extend([
+            r"C:\Program Files\Zabbix Agent\zabbix_agentd.conf",
+            r"C:\Program Files\Zabbix Agent 2\zabbix_agent2.conf",
+            r"C:\zabbix\zabbix_agentd.conf",
+            r"C:\zabbix_agentd.conf",
+        ])
+    else:
+        candidates.extend([
+            "/etc/zabbix/zabbix_agentd.conf",
+            "/etc/zabbix/zabbix_agent2.conf",
+            "/usr/local/etc/zabbix_agentd.conf",
+        ])
+
+    for p in candidates:
+        if os.path.isfile(p):
+            server = None
+            port = None
+            hostname = None
+            try:
+                with open(p, "r", encoding="utf-8", errors="replace") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("#") or not line:
+                            continue
+                        if line.startswith("ServerActive=") or line.startswith("Server="):
+                            is_active = line.startswith("ServerActive=")
+                            if not server or is_active:
+                                val = line.split("=", 1)[1].strip()
+                                first = val.split(",")[0].strip()
+                                if ":" in first:
+                                    s_ip, s_port = first.split(":", 1)
+                                    server = s_ip.strip()
+                                    if s_port.strip().isdigit():
+                                        port = int(s_port.strip())
+                                else:
+                                    server = first
+                        if line.startswith("Hostname="):
+                            val = line.split("=", 1)[1].strip()
+                            hostname = val.split(",")[0].strip()
+                if server or hostname:
+                    return {"path": p, "server": server, "port": port, "hostname": hostname}
+            except Exception:
+                pass
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Ookla Speedtest to Zabbix (Python)")
-    parser.add_argument("--server", "-z", default=os.getenv("ZABBIX_SERVER", "127.0.0.1"), help="Zabbix サーバー IP またはホスト名 (デフォルト: 127.0.0.1 または環境変数 ZABBIX_SERVER)")
-    parser.add_argument("--port", "-p", type=int, default=10051, help="Zabbix トラッパーポート (デフォルト: 10051)")
-    parser.add_argument("--host", "-s", default="Speedtest", help="Zabbix 上の登録ホスト名 (デフォルト: Speedtest)")
+    parser.add_argument("--config", "-c", default=None, help="Zabbix Agent 設定ファイルのパス (自動検出も可能)")
+    parser.add_argument("--server", "-z", default=None, help="Zabbix サーバー IP またはホスト名")
+    parser.add_argument("--port", "-p", type=int, default=None, help="Zabbix トラッパーポート (デフォルト: 10051)")
+    parser.add_argument("--host", "-s", default=None, help="Zabbix 上の登録ホスト名 (デフォルト: Speedtest)")
     parser.add_argument("--prefix", "-k", default="speedtest", help="アイテムキープレフィックス (デフォルト: speedtest)")
     parser.add_argument("--speedtest-path", default=None, help="speedtest コマンドのパス")
     parser.add_argument("--dry-run", action="store_true", help="Zabbix への送信を行わず結果を表示")
     args = parser.parse_args()
+
+    # Zabbix Agent 設定ファイルからの自動解決
+    conf_settings = get_zabbix_agent_conf_settings(args.config)
+    
+    server = args.server
+    port = args.port or 10051
+    host = args.host
+
+    if not server:
+        if conf_settings and conf_settings.get("server"):
+            server = conf_settings["server"]
+            if not args.port and conf_settings.get("port"):
+                port = conf_settings["port"]
+            log(f"Zabbix Agent 設定ファイル ({conf_settings['path']}) からサーバー ({server}) を検出しました。")
+        else:
+            server = os.getenv("ZABBIX_SERVER", "127.0.0.1")
+
+    if not host:
+        if conf_settings and conf_settings.get("hostname"):
+            host = conf_settings["hostname"]
+            log(f"Zabbix Agent 設定ファイルからホスト名 ({host}) を検出しました。")
+        else:
+            host = "Speedtest"
 
     # 1. zabbix_utils の確認 (DryRun 以外)
     Sender = None
@@ -135,7 +210,6 @@ def main():
 
     # 5. メトリクス一覧構築
     prefix = args.prefix
-    host = args.host
     metrics = {
         f"{prefix}.ping.latency": ping_latency,
         f"{prefix}.ping.jitter": ping_jitter,
@@ -164,10 +238,10 @@ def main():
         return
 
     # zabbix_utils で送信
-    sender = Sender(server=args.server, port=args.port)
+    sender = Sender(server=server, port=port)
     packet = [ItemValue(host, k, str(v)) for k, v in metrics.items()]
 
-    log(f"Zabbix サーバー ({args.server}:{args.port}) へ {len(packet)} 件のメトリクスを送信中 (Python / zabbix_utils)...")
+    log(f"Zabbix サーバー ({server}:{port}) へ {len(packet)} 件のメトリクスを送信中 (Python / zabbix_utils)...")
     try:
         response = sender.send(packet)
         log(f"Zabbix サーバー応答: processed: {response.processed}; failed: {response.failed}; total: {response.total}; time: {response.time}")
