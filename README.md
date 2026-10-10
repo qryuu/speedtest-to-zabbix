@@ -178,23 +178,25 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 
 ---
 
-### 受信アイテム一覧（Zabbix トラッパー）
+### アイテム構成一覧（マスターアイテム & 依存アイテム設計）
 
-| アイテムキー | データ型 | 単位 | 説明 |
-| :--- | :--- | :--- | :--- |
-| `speedtest.download.bps` | 数値 (符号なし) | `bps` | ダウンロード実効速度 |
-| `speedtest.upload.bps` | 数値 (符号なし) | `bps` | アップロード実効速度 |
-| `speedtest.ping.latency` | 数値 (浮動小数) | `ms` | Ping 遅延時間 |
-| `speedtest.ping.jitter` | 数値 (浮動小数) | `ms` | ジッター |
-| `speedtest.download.latency` | 数値 (浮動小数) | `ms` | ダウンロード負荷時遅延 (Bufferbloat) |
-| `speedtest.upload.latency` | 数値 (浮動小数) | `ms` | アップロード負荷時遅延 (Bufferbloat) |
-| `speedtest.packetloss` | 数値 (浮動小数) | `%` | パケットロス率 |
-| `speedtest.download.bytes` | 数値 (符号なし) | `B` | ダウンロード通信量 |
-| `speedtest.upload.bytes` | 数値 (符号なし) | `B` | アップロード通信量 |
-| `speedtest.server.name` | 文字列 | - | 接続先サーバー名 |
-| `speedtest.server.id` | 数値 (符号なし) | - | 接続先サーバー ID |
-| `speedtest.result.url` | 文字列 | - | 結果 Web 共有 URL |
-| `speedtest.json` | テキスト | - | 計測結果生 JSON (マスターアイテム) |
+本テンプレートは、Zabbix 推奨の **「マスターアイテム（生 JSON 1 回受信）＋ 依存アイテム（JSONPATH 自動抽出・計算）」** アーキテクチャを採用しています。各スクリプトは `speedtest.json` 1 件のみを送信し、Zabbix サーバー側で全指標が即時展開されます。
+
+| アイテムキー | アイテムタイプ | データ型 | 単位 | 説明 |
+| :--- | :--- | :--- | :--- | :--- |
+| `speedtest.json` | **マスター (トラッパー)** | テキスト | - | 計測結果の生 JSON（各スクリプトからこれを受信） |
+| `speedtest.download.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | ダウンロード実効速度 |
+| `speedtest.upload.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | アップロード実効速度 |
+| `speedtest.ping.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | Ping 遅延時間 |
+| `speedtest.ping.jitter` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | ジッター |
+| `speedtest.download.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | ダウンロード負荷時遅延 (Bufferbloat) |
+| `speedtest.upload.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | アップロード負荷時遅延 (Bufferbloat) |
+| `speedtest.packetloss` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `%` | パケットロス率 |
+| `speedtest.download.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | ダウンロード通信量 |
+| `speedtest.upload.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | アップロード通信量 |
+| `speedtest.server.name` | 依存アイテム (JSONPATH) | 文字列 | - | 接続先サーバー名 |
+| `speedtest.server.id` | 依存アイテム (JSONPATH) | 数値 (符号なし) | - | 接続先サーバー ID |
+| `speedtest.result.url` | 依存アイテム (JSONPATH) | 文字列 | - | 結果 Web 共有 URL |
 
 ---
 

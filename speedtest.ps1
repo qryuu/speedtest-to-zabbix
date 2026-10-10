@@ -304,50 +304,26 @@ Write-Log "  Upload   : $uploadMbps Mbps ($uploadBps bps)"
 Write-Log "  Loss     : $packetLoss %"
 Write-Log "  URL      : $($data.result.url)"
 
-# 5. 送信データの生成
+# 5. 送信データの生成 (Zabbix テンプレートのマスターアイテム speedtest.json 1件に統一)
+$compactJson = ($jsonLine -replace "[\r\n]+", "").Trim()
+$masterKey = "$ItemPrefix.json"
+
 $itemsList = [System.Collections.Generic.List[hashtable]]::new()
 $tsvRecords = [System.Collections.Generic.List[string]]::new()
 
-function Add-Metric {
-    param([string]$KeySuffix, [string]$Value)
-    $fullKey = "$ItemPrefix.$KeySuffix"
-    $itemsList.Add(@{ host = $Hostname; key = $fullKey; value = $Value })
-    $tsvRecords.Add("$Hostname`t$fullKey`t$Value")
-}
-
-Add-Metric "ping.latency" $pingLatency
-Add-Metric "ping.jitter" $pingJitter
-Add-Metric "download.bps" $downloadBps
-Add-Metric "download.mbps" $downloadMbps
-Add-Metric "upload.bps" $uploadBps
-Add-Metric "upload.mbps" $uploadMbps
-Add-Metric "download.bytes" "$($data.download.bytes)"
-Add-Metric "upload.bytes" "$($data.upload.bytes)"
-Add-Metric "packetloss" $packetLoss
-Add-Metric "server.name" "$($data.server.name)"
-Add-Metric "server.id" "$($data.server.id)"
-Add-Metric "result.url" "$($data.result.url)"
-
-if ($SendRawJson) {
-    $compactJson = ($jsonLine -replace "[\r\n]+", "").Trim()
-    Add-Metric "json" $compactJson
-}
+$itemsList.Add(@{ host = $Hostname; key = $masterKey; value = $compactJson })
+$tsvRecords.Add("$Hostname`t$masterKey`t$compactJson")
 
 # 6. 送信処理 / DryRun 処理
 if ($DryRun) {
     Write-Log "[DryRun] Zabbix サーバーへの送信はスキップされました。"
-    Write-Log "[DryRun] 送信方式: $SendMethod | 送信対象メトリクス数: $($itemsList.Count) 件"
-    foreach ($item in $itemsList) {
-        if ($item.key -eq "$ItemPrefix.json") {
-            Write-Host "  Host: $($item.host) | Key: $($item.key) | Value: [RAW JSON $($item.value.Length) 文字]"
-        } else {
-            Write-Host "  Host: $($item.host) | Key: $($item.key) | Value: $($item.value)"
-        }
-    }
+    Write-Log "[DryRun] 送信方式: $SendMethod | 送信対象マスターアイテム: $masterKey"
+    Write-Host "  Host: $Hostname | Key: $masterKey | Payload: [RAW JSON $($compactJson.Length) 文字]"
+    Write-Log "[DryRun] テンプレート側の DEPENDENT アイテム (JSONPATH) により全メトリクスが Zabbix 上で自動展開・計算されます。"
     exit 0
 }
 
-Write-Log "Zabbix サーバー ($($ZabbixServer):$($ZabbixPort)) へ $($itemsList.Count) 件のメトリクスを送信中 (送信方式: $SendMethod)..."
+Write-Log "Zabbix サーバー ($($ZabbixServer):$($ZabbixPort)) へ計測結果 ($masterKey) を送信中 (送信方式: $SendMethod)..."
 
 if ($SendMethod -eq "PowerShell") {
     # --- 方式1: PowerShell ネイティブソケット送信 ---

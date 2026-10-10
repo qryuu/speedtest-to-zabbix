@@ -177,23 +177,25 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 
 ---
 
-### Received Trapper Items
+### Template Item Architecture (Master & Dependent Items)
 
-| Item Key | Type | Units | Description |
-| :--- | :--- | :--- | :--- |
-| `speedtest.download.bps` | Numeric (unsigned) | `bps` | Download bandwidth |
-| `speedtest.upload.bps` | Numeric (unsigned) | `bps` | Upload bandwidth |
-| `speedtest.ping.latency` | Numeric (float) | `ms` | Idle ping latency |
-| `speedtest.ping.jitter` | Numeric (float) | `ms` | Latency jitter |
-| `speedtest.download.latency` | Numeric (float) | `ms` | Latency under download load (Bufferbloat) |
-| `speedtest.upload.latency` | Numeric (float) | `ms` | Latency under upload load (Bufferbloat) |
-| `speedtest.packetloss` | Numeric (float) | `%` | Packet loss percentage |
-| `speedtest.download.bytes` | Numeric (unsigned) | `B` | Total download data transfer |
-| `speedtest.upload.bytes` | Numeric (unsigned) | `B` | Total upload data transfer |
-| `speedtest.server.name` | Character | - | Connected test server name |
-| `speedtest.server.id` | Numeric (unsigned) | - | Connected test server ID |
-| `speedtest.result.url` | Character | - | Ookla web result URL |
-| `speedtest.json` | Text | - | Raw JSON result (master item) |
+This template follows Zabbix's best practice: **"Single Master Item (Trapper) + Dependent Items (JSONPATH extraction & calculation)"**. Scripts only send a single `speedtest.json` payload, and Zabbix server automatically extracts and calculates all individual metrics instantaneously.
+
+| Item Key | Item Type | Data Type | Units | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `speedtest.json` | **Master (Trapper)** | Text | - | Raw JSON result (scripts send this single item) |
+| `speedtest.download.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | Download bandwidth |
+| `speedtest.upload.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | Upload bandwidth |
+| `speedtest.ping.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Idle ping latency |
+| `speedtest.ping.jitter` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency jitter |
+| `speedtest.download.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency under download load (Bufferbloat) |
+| `speedtest.upload.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency under upload load (Bufferbloat) |
+| `speedtest.packetloss` | Dependent (JSONPATH) | Numeric (float) | `%` | Packet loss percentage |
+| `speedtest.download.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | Total download data transfer |
+| `speedtest.upload.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | Total upload data transfer |
+| `speedtest.server.name` | Dependent (JSONPATH) | Character | - | Connected test server name |
+| `speedtest.server.id` | Dependent (JSONPATH) | Numeric (unsigned) | - | Connected test server ID |
+| `speedtest.result.url` | Dependent (JSONPATH) | Character | - | Ookla web result URL |
 
 ---
 
