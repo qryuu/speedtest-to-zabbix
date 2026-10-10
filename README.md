@@ -51,17 +51,35 @@ Windows および Linux 上で Ookla Speedtest CLI を定期実行し、回線�
 
 ## 使い方
 
+### Zabbix サーバーの設定方法（パラメータ優先順位）
+各スクリプトとも、送信先 Zabbix サーバーは以下の優先順位で自動解決されます：
+1. **コマンドライン引数**（最優先）: `-ZabbixServer` (PowerShell) / `--server` (Python) / `-z` (Shell)
+2. **環境変数 `ZABBIX_SERVER`**: システムまたはセッションに設定されている場合
+3. **デフォルト値**: **`127.0.0.1`**（ローカルホスト）
+
+```bash
+# 環境変数で事前に指定しておく例 (推奨)
+export ZABBIX_SERVER="192.168.1.10"       # Linux / macOS
+$env:ZABBIX_SERVER = "192.168.1.10"       # PowerShell
+```
+
+---
+
 ### 方式 1: PowerShell ネイティブ送信（Windows 推奨）
 
 ```powershell
 # 動作確認 (Zabbix への送信なしで画面表示)
 .\speedtest.ps1 -DryRun
 
-# 通常実行 (PowerShell ネイティブソケットで送信、外部バイナリ不要)
+# 通常実行 (ローカルホスト 127.0.0.1 または環境変数 ZABBIX_SERVER へ送信)
 .\speedtest.ps1
+
+# 引数で直接サーバー IP を指定して実行
+.\speedtest.ps1 -ZabbixServer 192.168.1.10 -Hostname "MyPC"
 
 # バッチ経由での実行 (PowerShell 7 優先起動)
 speedtest.bat
+speedtest.bat -ZabbixServer 192.168.1.10
 ```
 
 ### 方式 2: Python 送信（Linux / Windows 共通推奨）
@@ -92,8 +110,8 @@ chmod +x speedtest_zabbix.sh
 # 引数でサーバーやホスト名を指定
 ./speedtest_zabbix.sh -z 192.168.1.10 -s "MyServer"
 
-# （参考）最小限のワンライナー送信
-speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194.38.180 -s "Speedtest" -k speedtest.json -i -
+# （参考）最小限のワンライナー送信 (サーバーIPを指定)
+speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<ZabbixServer_IP>" -s "Speedtest" -k speedtest.json -i -
 ```
 
 ### 方式 4: Windows ZabbixSender バイナリ送信
@@ -151,5 +169,5 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194
 0 * * * * python3 /path/to/speedtest_zabbix.py > /dev/null 2>&1
 
 # パターン C: パイプワンライナー方式
-0 * * * * speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z 52.194.38.180 -s "Speedtest" -k speedtest.json -i - > /dev/null 2>&1
+0 * * * * speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<ZabbixServer_IP>" -s "Speedtest" -k speedtest.json -i - > /dev/null 2>&1
 ```

@@ -8,10 +8,10 @@
 
 set -euo pipefail
 
-# デフォルト設定
-ZABBIX_SERVER="52.194.38.180"
-ZABBIX_PORT="10051"
-ZABBIX_HOST="Speedtest"
+# デフォルト設定 (環境変数または 127.0.0.1)
+ZABBIX_SERVER="${ZABBIX_SERVER:-127.0.0.1}"
+ZABBIX_PORT="${ZABBIX_PORT:-10051}"
+ZABBIX_HOST="${ZABBIX_HOST:-Speedtest}"
 ITEM_KEY="speedtest.json"
 DRY_RUN=0
 MAX_RETRIES=3
