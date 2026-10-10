@@ -1,21 +1,21 @@
 zabbix_export:
   version: '7.0'
   template_groups:
-    - uuid: e5be8e009c61477ca38b16ae08352a19
-      name: 自宅ラックテンプレート
+    - uuid: 846977d1dfed4968bc5f8bdb363285bc
+      name: 'Templates/Applications'
     - uuid: 9a8b161e6ea443b5b300a59a3fe69ece
-      name: 'qryuu Templates'
+      name: 'Templates/Network services'
   templates:
     - uuid: 22b975348cd340c4987a1ee61481c8b6
-      template: Speedtest
+      template: template_speedtest_multiplatform
       name: 'Speedtest（Ookla CLI）'
       description: |
         Ookla Speedtest CLI による回線速度および品質監視テンプレート（Linux / Windows 共通）。
-        クライアント側から zabbix_sender で送信された speedtest.json をマスターアイテムで受信し、
+        クライアント側から zabbix_sender または TCP ソケットで送信された speedtest.json をマスターアイテムで受信し、
         依存アイテム（JSONPath）で各メトリクスを自動パース・展開してグラフ化および閾値監視を行います。
       groups:
-        - name: 自宅ラックテンプレート
-        - name: 'qryuu Templates'
+        - name: 'Templates/Applications'
+        - name: 'Templates/Network services'
       items:
         - uuid: 602a3cd356e744c2ad02a72a37fa3eda
           name: 'Speedtest: 生データ (JSON)'
@@ -51,7 +51,7 @@ zabbix_export:
               value: Speedtest
           triggers:
             - uuid: bc452cc537944cb8b079333023858520
-              expression: 'last(/Speedtest/speedtest.download.bps)<{$SPEEDTEST.WARN.DOWN} and {$SPEEDTEST.WARN.DOWN}>0'
+              expression: 'last(/template_speedtest_multiplatform/speedtest.download.bps)<{$SPEEDTEST.WARN.DOWN} and {$SPEEDTEST.WARN.DOWN}>0'
               name: 'Speedtest: ダウンロード速度低下 ({ITEM.LASTVALUE} < {$SPEEDTEST.WARN.DOWN})'
               priority: WARNING
               description: 'ダウンロード速度が設定された閾値を下回りました。'
@@ -78,7 +78,7 @@ zabbix_export:
               value: Speedtest
           triggers:
             - uuid: 38202f1cc401489892739834a86f6f5a
-              expression: 'last(/Speedtest/speedtest.upload.bps)<{$SPEEDTEST.WARN.UP} and {$SPEEDTEST.WARN.UP}>0'
+              expression: 'last(/template_speedtest_multiplatform/speedtest.upload.bps)<{$SPEEDTEST.WARN.UP} and {$SPEEDTEST.WARN.UP}>0'
               name: 'Speedtest: アップロード速度低下 ({ITEM.LASTVALUE} < {$SPEEDTEST.WARN.UP})'
               priority: WARNING
               description: 'アップロード速度が設定された閾値を下回りました。'
@@ -103,7 +103,7 @@ zabbix_export:
               value: Speedtest
           triggers:
             - uuid: 4c6e5aaeb40a490e8f4777819dbdba25
-              expression: 'last(/Speedtest/speedtest.ping.latency)>{$SPEEDTEST.WARN.PING} and {$SPEEDTEST.WARN.PING}>0'
+              expression: 'last(/template_speedtest_multiplatform/speedtest.ping.latency)>{$SPEEDTEST.WARN.PING} and {$SPEEDTEST.WARN.PING}>0'
               name: 'Speedtest: Ping遅延悪化 ({ITEM.LASTVALUE} > {$SPEEDTEST.WARN.PING}ms)'
               priority: WARNING
               description: 'Ping 遅延が設定された閾値を超過しました。'
@@ -186,7 +186,7 @@ zabbix_export:
               value: Speedtest
           triggers:
             - uuid: 16cf912909ff4022a156aaeb69bdc2ee
-              expression: 'last(/Speedtest/speedtest.packetloss)>{$SPEEDTEST.WARN.LOSS} and {$SPEEDTEST.WARN.LOSS}>0'
+              expression: 'last(/template_speedtest_multiplatform/speedtest.packetloss)>{$SPEEDTEST.WARN.LOSS} and {$SPEEDTEST.WARN.LOSS}>0'
               name: 'Speedtest: パケットロス発生 ({ITEM.LASTVALUE} > {$SPEEDTEST.WARN.LOSS}%)'
               priority: WARNING
               description: '回線のパケットロスが設定値を超過しました。'
@@ -295,7 +295,7 @@ zabbix_export:
           description: 'パケットロス警告閾値 (%)（0で無効化）'
   triggers:
     - uuid: 8201bfbb18b74f949a35394ae64776e7
-      expression: 'nodata(/Speedtest/speedtest.json,{$SPEEDTEST.NODATA})=1'
+      expression: 'nodata(/template_speedtest_multiplatform/speedtest.json,{$SPEEDTEST.NODATA})=1'
       name: 'Speedtest: 計測データを受信できていません ({$SPEEDTEST.NODATA}経過)'
       priority: WARNING
       description: '定期計測タスク（タスクスケジューラまたはcron）の停止、またはネットワーク通信障害の可能性があります。'
@@ -307,13 +307,13 @@ zabbix_export:
         - drawtype: BOLD_LINE
           color: 1A7C11
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.download.bps
         - sortorder: '1'
           drawtype: BOLD_LINE
           color: 2774A4
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.upload.bps
     - uuid: 9718dbcb47bd42fc84c5f8f3c250044f
       name: 'Speedtest: レイテンシ・ジッター品質'
@@ -321,25 +321,25 @@ zabbix_export:
         - drawtype: BOLD_LINE
           color: F63100
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.ping.latency
         - sortorder: '1'
-          drawtype: LINE
+          drawtype: SINGLE_LINE
           color: F6C400
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.ping.jitter
         - sortorder: '2'
-          drawtype: LINE
+          drawtype: SINGLE_LINE
           color: 0288D1
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.download.latency
         - sortorder: '3'
-          drawtype: LINE
+          drawtype: SINGLE_LINE
           color: 7B1FA2
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.upload.latency
     - uuid: 9e91ca8276604ed8b6003181b619e2d1
       name: 'Speedtest: パケットロス率'
@@ -351,5 +351,5 @@ zabbix_export:
         - drawtype: GRADIENT_LINE
           color: E45959
           item:
-            host: Speedtest
+            host: template_speedtest_multiplatform
             key: speedtest.packetloss
