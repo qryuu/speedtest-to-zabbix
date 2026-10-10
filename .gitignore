@@ -1,0 +1,16 @@
+# Binaries (Ookla Speedtest CLI & Zabbix Sender)
+*.exe
+*.dll
+*.zip
+
+# Temporary files
+*.tmp
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
