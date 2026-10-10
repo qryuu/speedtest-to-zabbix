@@ -266,4 +266,5 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 | [`import_template.py`](./import_template.py) | Zabbix API テンプレート自動登録スクリプト (Python 標準ライブラリ版) |
 | [`README.md`](./README.md) | プロジェクト仕様書・マニュアル (日本語) |
 | [`README_EN.md`](./README_EN.md) | Project Documentation (English) |
+| [`LICENSE`](./LICENSE) | MIT ライセンス |
 

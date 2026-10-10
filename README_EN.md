@@ -265,3 +265,4 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 | [`setup.sh`](./setup.sh) | Linux automated setup wizard (checks, DryRun, cron, API import) |
 | [`import_template.ps1`](./import_template.ps1) | Zabbix API template importer (PowerShell) |
 | [`import_template.py`](./import_template.py) | Zabbix API template importer (Python standard library only) |
+| [`LICENSE`](./LICENSE) | MIT License |
