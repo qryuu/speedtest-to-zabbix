@@ -2,9 +2,11 @@
 
 <div align="right">
 
+[![GitHub Release](https://img.shields.io/github/v/release/qryuu/speedtest-to-zabbix?color=blue&label=version)](https://github.com/qryuu/speedtest-to-zabbix/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![Zabbix Community Template PR](https://img.shields.io/badge/Zabbix%20Community%20Template-PR%20%23863-orange.svg)](https://github.com/zabbix/community-templates/pull/863)
 [![日本語](https://img.shields.io/badge/Language-%E6%97%A5%E6%9C%AC%E8%AA%9E-blue.svg)](#)
 [![English](https://img.shields.io/badge/Language-English-lightgrey.svg)](./README_EN.md)
-[![Zabbix Community Template PR](https://img.shields.io/badge/Zabbix%20Community%20Template-PR%20%23863-orange.svg)](https://github.com/zabbix/community-templates/pull/863)
 
 </div>
 
