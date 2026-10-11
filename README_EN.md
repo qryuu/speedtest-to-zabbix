@@ -243,6 +243,17 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 ### Manual Scheduling
 
 #### Windows Task Scheduler
+
+##### Recommended: Completely Silent (Zero Console Flicker)
+By utilizing Windows built-in `wscript.exe` (GUI subsystem) and the included `run_hidden.vbs`, tasks execute in complete stealth without displaying any momentary black console window flicker (`setup.ps1` automatically configures this mode):
+- **Program/script**: `C:\Windows\System32\wscript.exe`
+- **Add arguments**:
+  ```text
+  "C:\Path\To\speedtest-to-zabbix\run_hidden.vbs" -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
+  ```
+- **Start in**: `C:\Path\To\speedtest-to-zabbix`
+
+##### Standard: Direct PowerShell Invocation
 - **Program/script**: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
   > [!TIP]
   > When using Microsoft Store editions of PowerShell 7 or background non-interactive sessions, relative name `pwsh.exe` may fail to resolve (`0x80070002`). Use the absolute path to Windows built-in `powershell.exe` or full path to standard `pwsh.exe`.
@@ -282,6 +293,7 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Cross-platform Python sender (uses official `zabbix-utils`) |
 | [`speedtest_zabbix.sh`](./speedtest_zabbix.sh) | Linux shell script (uses `zabbix-sender`, zero pip dependencies) |
 | [`setup.ps1`](./setup.ps1) | Windows automated setup wizard (checks, DryRun, Task Scheduler, API import) |
+| [`run_hidden.vbs`](./run_hidden.vbs) | Windows Task Scheduler silent execution wrapper (eliminates console window popup flicker) |
 | [`setup.sh`](./setup.sh) | Linux automated setup wizard (checks, DryRun, cron, API import) |
 | [`import_template.ps1`](./import_template.ps1) | Zabbix API template importer (PowerShell) |
 | [`import_template.py`](./import_template.py) | Zabbix API template importer (Python standard library only) |

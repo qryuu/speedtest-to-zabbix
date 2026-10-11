@@ -244,6 +244,17 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 ### 手動でスケジューラ登録する場合
 
 #### Windows タスクスケジューラ
+
+##### 推奨方式: 完全非表示（コンソールチラつきゼロ）
+Windows 標準の `wscript.exe`（GUI サブシステム）と同梱の `run_hidden.vbs` を経由することで、PowerShell 特有の起動時の一瞬の黒いコンソール描画を 1 ミリ秒も発生させずに完全ステルスで定期実行できます（`setup.ps1` はこの方式を自動構成します）：
+- **プログラム/スクリプト**: `C:\Windows\System32\wscript.exe`
+- **引数の追加**:
+  ```text
+  "C:\Path\To\speedtest-to-zabbix\run_hidden.vbs" -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
+  ```
+- **開始**: `C:\Path\To\speedtest-to-zabbix`
+
+##### 通常方式: PowerShell 直接起動
 - **プログラム/スクリプト**: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
   > [!TIP]
   > Microsoft Store 版 PowerShell 7 等を使用している場合、バックグラウンドのタスク実行時に相対名 `pwsh.exe` の実体解決に失敗（`0x80070002`）することがあります。確実な実行のため、Windows 標準の `powershell.exe` 絶対パス、または正規インストールされた `pwsh.exe` の実体フルパスを指定してください。
@@ -281,6 +292,7 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Linux / Windows 共通 Python 送信スクリプト (`zabbix-utils` 使用) |
 | [`speedtest_zabbix.sh`](./speedtest_zabbix.sh) | Linux 用シェルスクリプト (`zabbix-sender` 使用・pip 不要) |
 | [`setup.ps1`](./setup.ps1) | Windows 自動セットアップスクリプト (検証・タスク登録・テンプレート登録) |
+| [`run_hidden.vbs`](./run_hidden.vbs) | Windows タスクスケジューラ用完全非表示実行ラッパー (コンソールチラつきゼロ化) |
 | [`setup.sh`](./setup.sh) | Linux 自動セットアップスクリプト (検証・cron 登録・テンプレート登録) |
 | [`import_template.ps1`](./import_template.ps1) | Zabbix API テンプレート自動登録スクリプト (PowerShell 版) |
 | [`import_template.py`](./import_template.py) | Zabbix API テンプレート自動登録スクリプト (Python 標準ライブラリ版) |
