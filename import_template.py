@@ -94,7 +94,7 @@ def main():
         "triggers": {"createMissing": True, "updateExisting": True},
         "graphs": {"createMissing": True, "updateExisting": True},
         "template_groups": {"createMissing": True, "updateExisting": True},
-        "template_dashboards": {"createMissing": True, "updateExisting": True},
+        "templateDashboards": {"createMissing": True, "updateExisting": True},
     }
 
     result = invoke_zabbix_api(api_url, args.token, "configuration.import", {

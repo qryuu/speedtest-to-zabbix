@@ -1,4 +1,4 @@
-﻿#
+#
 <#
 .SYNOPSIS
     Zabbix API を使用して Speedtest.yaml テンプレートを Zabbix サーバーへインポート・登録するスクリプト。
@@ -133,7 +133,7 @@ $importRules = @{
         createMissing  = $true
         updateExisting = $true
     }
-    template_dashboards = @{
+    templateDashboards = @{
         createMissing  = $true
         updateExisting = $true
     }
@@ -172,7 +172,7 @@ if (-not [string]::IsNullOrWhiteSpace($LinkToHost)) {
 
     # インポートしたテンプレートの templateid を取得
     $templates = Invoke-ZabbixApi -Method "template.get" -Params @{
-        filter = @{ host = @("Speedtest（Ookla CLI）") }
+        filter = @{ host = @("template_speedtest_multiplatform", "Speedtest（Ookla CLI）", "Speedtest") }
     }
     if ($null -eq $templates -or $templates.Count -eq 0) {
         # テンプレート名フォールバック

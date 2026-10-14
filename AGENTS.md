@@ -50,8 +50,8 @@ Ask concise, numbered questions based on Step 1 findings:
    - **EN**: "How often should Speedtest run? (Recommended: Hourly / Daily at midnight / None):"
    - **JA**: 「回線測定の実行頻度はどれにしますか？（推奨: 1時間ごと / 毎日深夜0時 / スケジューラ登録なし）:」
 4. **Automated Template Import via Zabbix API**:
-   - **EN**: "Would you like me to automatically import the Zabbix template (`Speedtest.yaml`) and link it to this host via Zabbix API? If yes, please provide your Zabbix Web URL (e.g., `http://192.168.1.10/zabbix`) and API Token."
-   - **JA**: 「Zabbix サーバーへのテンプレート（`Speedtest.yaml`）のインポートとホスト紐付けも AI が自動で行いますか？ 自動で行う場合は、Zabbix Web の URL（例: `http://192.168.1.10/zabbix`）と API トークンをお知らせください。」
+   - **EN**: "Would you like me to automatically import the Zabbix template (`Speedtest_EN.yaml` or `Speedtest.yaml`) and link it to this host via Zabbix API? If yes, please provide your Zabbix Web URL (e.g., `http://192.168.1.10/zabbix`) and API Token."
+   - **JA**: 「Zabbix サーバーへのテンプレート（`Speedtest.yaml` または `Speedtest_EN.yaml`）のインポートとホスト紐付けも AI が自動で行いますか？ 自動で行う場合は、Zabbix Web の URL（例: `http://192.168.1.10/zabbix`）と API トークンをお知らせください。」
 
 ---
 
@@ -132,5 +132,5 @@ Confirm and report the results to the user:
 1. **Verification**: Confirm that Speedtest execution and JSON metrics parsing succeeded.
 2. **Scheduler**: Confirm that the recurring task was successfully registered in Windows Task Scheduler or Linux cron.
 3. **Template Status**:
-   - If imported via API: Confirm that `Speedtest.yaml` was registered and linked to the host.
-   - If manual: Remind the user to import `Speedtest.yaml` via Zabbix Web UI (*Data collection* -> *Templates* -> *Import*).
+   - If imported via API: Confirm that the template (`Speedtest.yaml` or `Speedtest_EN.yaml`) was registered and linked to the host.
+   - If manual: Remind the user to import `Speedtest.yaml` (or `Speedtest_EN.yaml` for English) via Zabbix Web UI (*Data collection* -> *Templates* -> *Import*).
