@@ -1,12 +1,12 @@
 zabbix_export:
   version: '7.0'
   template_groups:
-    - uuid: e5be8e009c61477ca38b16ae08352a19
-      name: 自宅ラックテンプレート
-    - uuid: 9a8b161e6ea443b5b300a59a3fe69ece
-      name: 'qryuu Templates'
-    - uuid: 36bff6c29a264600bfbd7611b514c185
+    - uuid: 846977d1dfed4968bc5f8bdb363285bc
       name: Templates/Applications
+    - uuid: 9a8b161e6ea443b5b300a59a3fe69ece
+      name: 'Templates/Network services'
+    - uuid: af98a02754a64314a929f3954d02e5c4
+      name: 'qryuu Templates'
   templates:
     - uuid: 22b975348cd340c4987a1ee61481c8b6
       template: template_speedtest_multiplatform
@@ -19,9 +19,9 @@ zabbix_export:
         name: qryuu
         version: 7.0-1
       groups:
-        - name: 自宅ラックテンプレート
-        - name: 'qryuu Templates'
         - name: Templates/Applications
+        - name: 'Templates/Network services'
+        - name: 'qryuu Templates'
       items:
         - uuid: 602a3cd356e744c2ad02a72a37fa3eda
           name: 'Speedtest: 生データ (JSON)'
@@ -274,7 +274,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
         - uuid: 134848637e7b409982850e70edb8f6ce
           name: 'Speedtest: 接続先サーバーID'
           type: DEPENDENT
@@ -292,7 +292,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
         - uuid: 7a551f91ddd046738fdebe3ad13b954b
           name: 'Speedtest: 結果URL'
           type: DEPENDENT
@@ -311,7 +311,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
         - uuid: d22e530b58da444ead18569b84fc2b03
           name: 'Speedtest: ISP名'
           type: DEPENDENT
@@ -330,7 +330,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
         - uuid: 56315ebc49e24cfe96f71d153cad2e49
           name: 'Speedtest: 外部IPアドレス'
           type: DEPENDENT
@@ -349,7 +349,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
         - uuid: 5547a0a05a9a477e964069d66029b222
           name: 'Speedtest: 接続先ロケーション'
           type: DEPENDENT
@@ -368,7 +368,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
         - uuid: 3072109f92e44b7f956d8dd5ca19c2a5
           name: 'Speedtest: 計測タイムスタンプ'
           type: DEPENDENT
@@ -387,7 +387,7 @@ zabbix_export:
             key: speedtest.json
           tags:
             - tag: component
-              value: network
+              value: metadata
       dashboards:
         - uuid: d15f62d8b5744a4fa40ca9b1724a2567
           name: 'Speedtest Dashboard'

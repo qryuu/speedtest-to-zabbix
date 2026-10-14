@@ -199,25 +199,25 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 
 本テンプレートは、Zabbix 推奨の **「マスターアイテム（生 JSON 1 回受信）＋ 依存アイテム（JSONPATH 自動抽出・計算）」** アーキテクチャを採用しています。各スクリプトは `speedtest.json` 1 件のみを送信し、Zabbix サーバー側で全指標が即時展開されます。
 
-| アイテムキー | アイテムタイプ | データ型 | 単位 | 説明 |
-| :--- | :--- | :--- | :--- | :--- |
-| `speedtest.json` | **マスター (トラッパー)** | テキスト | - | 計測結果の生 JSON（各スクリプトからこれを受信、history: 1d） |
-| `speedtest.download.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | ダウンロード実効速度 |
-| `speedtest.upload.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | アップロード実効速度 |
-| `speedtest.ping.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | Ping 遅延時間 |
-| `speedtest.ping.jitter` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | ジッター |
-| `speedtest.download.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | ダウンロード負荷時遅延 (Bufferbloat) |
-| `speedtest.upload.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | アップロード負荷時遅延 (Bufferbloat) |
-| `speedtest.packetloss` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `%` | パケットロス率 (サーバー非対応時は未取得) |
-| `speedtest.download.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | ダウンロード通信量 |
-| `speedtest.upload.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | アップロード通信量 |
-| `speedtest.server.name` | 依存アイテム (JSONPATH) | 文字列 | - | 接続先サーバー名 |
-| `speedtest.server.id` | 依存アイテム (JSONPATH) | 数値 (符号なし) | - | 接続先サーバー ID (trends: 0) |
-| `speedtest.result.url` | 依存アイテム (JSONPATH) | 文字列 | - | 結果 Web 共有 URL |
-| `speedtest.isp` | 依存アイテム (JSONPATH) | 文字列 | - | 契約プロバイダ (ISP) 名称 |
-| `speedtest.interface.externalip` | 依存アイテム (JSONPATH) | 文字列 | - | 測定元WAN側グローバルIPアドレス |
-| `speedtest.server.location` | 依存アイテム (JSONPATH) | 文字列 | - | 接続先サーバーの設置地域 |
-| `speedtest.timestamp` | 依存アイテム (JSONPATH) | 文字列 | - | Ookla CLI が返却した測定完了時刻 (ISO 8601) |
+| アイテムキー | アイテムタイプ | データ型 | 単位 | component タグ | 説明 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `speedtest.json` | **マスター (トラッパー)** | テキスト | - | `raw` | 計測結果の生 JSON（各スクリプトからこれを受信、history: 1d） |
+| `speedtest.download.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | `network` | ダウンロード実効速度 |
+| `speedtest.upload.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | `network` | アップロード実効速度 |
+| `speedtest.ping.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | `network` | Ping 遅延時間 |
+| `speedtest.ping.jitter` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | `network` | ジッター |
+| `speedtest.download.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | `network` | ダウンロード負荷時遅延 (Bufferbloat) |
+| `speedtest.upload.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | `network` | アップロード負荷時遅延 (Bufferbloat) |
+| `speedtest.packetloss` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `%` | `network` | パケットロス率 (サーバー非対応時は未取得) |
+| `speedtest.download.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | `network` | ダウンロード通信量 |
+| `speedtest.upload.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | `network` | アップロード通信量 |
+| `speedtest.server.name` | 依存アイテム (JSONPATH) | 文字列 | - | `metadata` | 接続先サーバー名 |
+| `speedtest.server.id` | 依存アイテム (JSONPATH) | 数値 (符号なし) | - | `metadata` | 接続先サーバー ID (trends: 0) |
+| `speedtest.result.url` | 依存アイテム (JSONPATH) | 文字列 | - | `metadata` | 結果 Web 共有 URL |
+| `speedtest.isp` | 依存アイテム (JSONPATH) | 文字列 | - | `metadata` | 契約プロバイダ (ISP) 名称 |
+| `speedtest.interface.externalip` | 依存アイテム (JSONPATH) | 文字列 | - | `metadata` | 測定元WAN側グローバルIPアドレス |
+| `speedtest.server.location` | 依存アイテム (JSONPATH) | 文字列 | - | `metadata` | 接続先サーバーの設置地域 |
+| `speedtest.timestamp` | 依存アイテム (JSONPATH) | 文字列 | - | `metadata` | Ookla CLI が返却した測定完了時刻 (ISO 8601) |
 
 ---
 
@@ -233,6 +233,11 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 | `{$SPEEDTEST.WARN.UP}` | `20M` | アップロード速度低下警告閾値 (bps)（0で無効化） |
 | `{$SPEEDTEST.WARN.PING}` | `50` | Ping遅延警告閾値 (ms)（0で無効化） |
 | `{$SPEEDTEST.WARN.LOSS}` | `2` | パケットロス警告閾値 (%)（0で無効化） |
+
+> [!IMPORTANT]
+> **⚠️ 旧バージョンからの移行時の注意点 (破壊的変更)**:  
+> - **マクロ名統一**: 未着検知マクロが `{$SPEEDTEST.NODATA}` から `{$SPEEDTEST.NODATA.WARN}` に変更されました。監視対象ホスト側で個別に未着時間を上書き設定していた場合は、ホストマクロ名を `{$SPEEDTEST.NODATA.WARN}` に更新してください（未変更の場合は既定値 `3h` が適用されます）。
+> - **パケットロス仕様変更**: サーバー非対応時に 0% を補完していた仕様を廃止し、未取得値として正常に破棄 (`DISCARD_VALUE`) されるようになりました。ロス率の誤検知を防ぐための改善です。
 
 ---
 
