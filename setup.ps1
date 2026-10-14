@@ -1,4 +1,4 @@
-﻿#
+#
 <#
 .SYNOPSIS
     Speedtest to Zabbix の Windows 自動セットアップスクリプト。
@@ -44,6 +44,10 @@ param(
     [Parameter()]
     [ValidateSet("Hourly", "Daily", "None")]
     [string]$Schedule = "Hourly",
+
+    [Parameter()]
+    [ValidateSet("Auto", "JA", "EN")]
+    [string]$Language = "Auto",
 
     [Parameter()]
     [string]$ZabbixUrl = "",
@@ -96,10 +100,19 @@ if ([string]::IsNullOrWhiteSpace($resolvedHost)) {
 # 2. speedtest.exe の確認
 $speedtestExe = Join-Path $PSScriptRoot "speedtest.exe"
 if (-not (Test-Path $speedtestExe) -and -not (Get-Command speedtest.exe -ErrorAction SilentlyContinue)) {
-    Write-Log "speedtest CLI が見つかりません。" "ERROR"
-    Write-Log "以下の公式サイトから speedtest.exe をダウンロードして、本フォルダ ($PSScriptRoot) に配置してください:" "WARN"
-    Write-Log "  https://www.speedtest.net/ja/apps/cli" "WARN"
-    exit 1
+    Write-Log "speedtest CLI が未配置のため、公式パッケージから自動ダウンロードを試みます..." "INFO"
+    try {
+        $zipPath = Join-Path $PSScriptRoot "ookla-speedtest.zip"
+        Invoke-WebRequest -Uri "https://install.speedtest.net/app/cli/ookla-speedtest-1.2.0-win64.zip" -OutFile $zipPath -UseBasicParsing
+        Expand-Archive -Path $zipPath -DestinationPath $PSScriptRoot -Force
+        Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        Write-Log "speedtest CLI の自動ダウンロードと配置に成功しました！" "INFO"
+    } catch {
+        Write-Log "自動ダウンロードに失敗しました: $_" "WARN"
+        Write-Log "以下の公式サイトから speedtest.exe をダウンロードして、本フォルダ ($PSScriptRoot) に配置してください:" "WARN"
+        Write-Log "  https://www.speedtest.net/ja/apps/cli" "WARN"
+        exit 1
+    }
 }
 Write-Log "speedtest CLI を検出しました。" "INFO"
 
@@ -123,7 +136,8 @@ if (-not [string]::IsNullOrWhiteSpace($ZabbixUrl) -and -not [string]::IsNullOrWh
     $importArgs = @(
         "-ZabbixUrl", $ZabbixUrl,
         "-ApiToken", $ApiToken,
-        "-LinkToHost", $resolvedHost
+        "-LinkToHost", $resolvedHost,
+        "-Language", $Language
     )
     & (Join-Path $PSScriptRoot "import_template.ps1") @importArgs
 }
@@ -131,18 +145,39 @@ if (-not [string]::IsNullOrWhiteSpace($ZabbixUrl) -and -not [string]::IsNullOrWh
 # 5. タスクスケジューラへの自動登録
 if ($Schedule -ne "None") {
     $taskName = "Speedtest-to-Zabbix"
-    Write-Log "タスクスケジューラにタスク '$taskName' を登録中 (スケジュール: $Schedule)..." "INFO"
-
-    $pwshExe = (Get-Command pwsh.exe -ErrorAction SilentlyContinue)
-    $psExePath = if ($pwshExe) { "pwsh.exe" } else { "powershell.exe" }
-
+    $vbsPath = Join-Path $PSScriptRoot "run_hidden.vbs"
     $scriptPath = Join-Path $PSScriptRoot "speedtest.ps1"
-    $actionArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`" -Hostname `"$resolvedHost`""
-    if (-not [string]::IsNullOrWhiteSpace($ZabbixServer)) {
-        $actionArgs += " -ZabbixServer `"$ZabbixServer`""
+    $wscriptExe = "$env:SystemRoot\System32\wscript.exe"
+
+    if (Test-Path $vbsPath -PathType Leaf) {
+        Write-Log "完全非表示ラッパー ($vbsPath) を使用してタスクを構成します（コンソールチラつきゼロ）。" "INFO"
+        $actionArgs = "`"$vbsPath`" -File `"$scriptPath`" -Hostname `"$resolvedHost`""
+        if (-not [string]::IsNullOrWhiteSpace($ZabbixServer)) {
+            $actionArgs += " -ZabbixServer `"$ZabbixServer`""
+        }
+        $taskRunCommand = "$wscriptExe $actionArgs"
+    } else {
+        # フォールバック: PowerShell 直起動
+        $defaultPowershell = "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe"
+        $psExePath = $defaultPowershell
+
+        $pwshCmd = Get-Command pwsh.exe -ErrorAction SilentlyContinue
+        if ($pwshCmd -and $pwshCmd.Source -and $pwshCmd.Source -notmatch 'WindowsApps' -and (Test-Path $pwshCmd.Source)) {
+            $psExePath = $pwshCmd.Source
+        } elseif (Test-Path "$env:ProgramFiles\PowerShell\7\pwsh.exe") {
+            $psExePath = "$env:ProgramFiles\PowerShell\7\pwsh.exe"
+        }
+
+        Write-Log "タスク実行バイナリとして '$psExePath' を使用します。" "INFO"
+
+        $actionArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptPath`" -Hostname `"$resolvedHost`""
+        if (-not [string]::IsNullOrWhiteSpace($ZabbixServer)) {
+            $actionArgs += " -ZabbixServer `"$ZabbixServer`""
+        }
+        $taskRunCommand = "$psExePath $actionArgs"
     }
 
-    $schArgs = @("/create", "/tn", $taskName, "/tr", "$psExePath $actionArgs", "/f")
+    $schArgs = @("/create", "/tn", $taskName, "/tr", $taskRunCommand, "/f")
     if ($Schedule -eq "Hourly") {
         $schArgs += @("/sc", "hourly")
     } elseif ($Schedule -eq "Daily") {

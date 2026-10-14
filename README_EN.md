@@ -153,19 +153,29 @@ speedtest --format=json --accept-license --accept-gdpr | zabbix_sender -z "<Zabb
 
 ## Zabbix Template Import & Configuration
 
-You can import `Speedtest.yaml` into your Zabbix server using either automated API scripts or the Web UI.
+Two template editions are available depending on your preferred language:
+- **English edition (Recommended)**: `Speedtest_EN.yaml` (fully compliant with official Zabbix Community Templates)
+- **Japanese edition**: `Speedtest.yaml` (item and trigger names in Japanese)
+
+You can import either template into your Zabbix server using automated API scripts or the Web UI.
 
 ### Method A: Automated Import via Zabbix API (Recommended)
-Use the included scripts to import the template and link it to your target host without opening a browser:
+Use the included scripts to import the template and link it to your target host without opening a browser. The script automatically selects the template matching your OS culture, or you can specify it explicitly via `-Language EN` / `-Language JA`:
 
 ```powershell
-# Windows (PowerShell)
+# Windows (PowerShell) - Automatically selects English unless OS culture is Japanese
 .\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest"
+
+# Explicitly specifying English edition
+.\import_template.ps1 -ZabbixUrl "http://192.168.1.10/zabbix" -ApiToken "<API_TOKEN>" -LinkToHost "Speedtest" -Language EN
 ```
 
 ```bash
-# Linux / Cross-platform (uses Python standard libraries only, no pip required)
+# Linux / Cross-platform (Python standard library only)
 python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest"
+
+# Explicitly specifying English edition
+python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "Speedtest" -l EN
 ```
 
 > [!NOTE]
@@ -252,13 +262,26 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 ### Manual Scheduling
 
 #### Windows Task Scheduler
-- **Program/script**: `pwsh.exe` (or `powershell.exe`)
+
+##### Recommended: Completely Silent (Zero Console Flicker)
+By utilizing Windows built-in `wscript.exe` (GUI subsystem) and the included `run_hidden.vbs`, tasks execute in complete stealth without displaying any momentary black console window flicker (`setup.ps1` automatically configures this mode):
+- **Program/script**: `C:\Windows\System32\wscript.exe`
+- **Add arguments**:
+  ```text
+  "C:\Path\To\speedtest-to-zabbix\run_hidden.vbs" -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
+  ```
+- **Start in**: `C:\Path\To\speedtest-to-zabbix`
+
+##### Standard: Direct PowerShell Invocation
+- **Program/script**: `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
+  > [!TIP]
+  > When using Microsoft Store editions of PowerShell 7 or background non-interactive sessions, relative name `pwsh.exe` may fail to resolve (`0x80070002`). Use the absolute path to Windows built-in `powershell.exe` or full path to standard `pwsh.exe`.
 - **Add arguments**:
   ```powershell
   -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\Path\To\speedtest-to-zabbix\speedtest.ps1"
   ```
 - **Start in**: `C:\Path\To\speedtest-to-zabbix`
-- *(For Python method, use `pythonw.exe` and pass `speedtest_zabbix.py` as argument)*
+- *(For Python method, use full path to `pythonw.exe` and pass `speedtest_zabbix.py` as argument)*
 
 #### Linux (cron)
 
@@ -289,8 +312,8 @@ One-command setup that verifies CLI execution, performs a DryRun, and schedules 
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Cross-platform Python sender (uses official `zabbix-utils`) |
 | [`speedtest_zabbix.sh`](./speedtest_zabbix.sh) | Linux shell script (uses `zabbix-sender`, zero pip dependencies) |
 | [`setup.ps1`](./setup.ps1) | Windows automated setup wizard (checks, DryRun, Task Scheduler, API import) |
+| [`run_hidden.vbs`](./run_hidden.vbs) | Windows Task Scheduler silent execution wrapper (eliminates console window popup flicker) |
 | [`setup.sh`](./setup.sh) | Linux automated setup wizard (checks, DryRun, cron, API import) |
 | [`import_template.ps1`](./import_template.ps1) | Zabbix API template importer (PowerShell) |
 | [`import_template.py`](./import_template.py) | Zabbix API template importer (Python standard library only) |
-| [`run_hidden.vbs`](./run_hidden.vbs) | Windows Task Scheduler silent execution wrapper |
 | [`LICENSE`](./LICENSE) | MIT License |
