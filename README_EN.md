@@ -200,19 +200,38 @@ This template follows Zabbix's best practice: **"Single Master Item (Trapper) + 
 
 | Item Key | Item Type | Data Type | Units | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `speedtest.json` | **Master (Trapper)** | Text | - | Raw JSON result (scripts send this single item) |
+| `speedtest.json` | **Master (Trapper)** | Text | - | Raw JSON result (scripts send this single item, history: 1d) |
 | `speedtest.download.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | Download bandwidth |
 | `speedtest.upload.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | Upload bandwidth |
 | `speedtest.ping.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Idle ping latency |
 | `speedtest.ping.jitter` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency jitter |
 | `speedtest.download.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency under download load (Bufferbloat) |
 | `speedtest.upload.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency under upload load (Bufferbloat) |
-| `speedtest.packetloss` | Dependent (JSONPATH) | Numeric (float) | `%` | Packet loss percentage |
+| `speedtest.packetloss` | Dependent (JSONPATH) | Numeric (float) | `%` | Packet loss percentage (discarded if unsupported by server) |
 | `speedtest.download.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | Total download data transfer |
 | `speedtest.upload.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | Total upload data transfer |
 | `speedtest.server.name` | Dependent (JSONPATH) | Character | - | Connected test server name |
-| `speedtest.server.id` | Dependent (JSONPATH) | Numeric (unsigned) | - | Connected test server ID |
+| `speedtest.server.id` | Dependent (JSONPATH) | Numeric (unsigned) | - | Connected test server ID (trends: 0) |
 | `speedtest.result.url` | Dependent (JSONPATH) | Character | - | Ookla web result URL |
+| `speedtest.isp` | Dependent (JSONPATH) | Character | - | Internet Service Provider (ISP) name |
+| `speedtest.interface.externalip` | Dependent (JSONPATH) | Character | - | Client WAN external IP address |
+| `speedtest.server.location` | Dependent (JSONPATH) | Character | - | Geographic location of the test server |
+| `speedtest.timestamp` | Dependent (JSONPATH) | Character | - | Measurement completion timestamp (ISO 8601) |
+
+---
+
+### Template User Macros (Threshold Customization)
+
+Thresholds and evaluation counts can be easily tuned via template macros (set to `0` to disable a specific trigger):
+
+| Macro | Default | Description |
+| :--- | :--- | :--- |
+| `{$SPEEDTEST.EVAL.COUNT}` | `3` | Number of recent measurements used for threshold evaluation (prevents flapping) |
+| `{$SPEEDTEST.NODATA.WARN}` | `3h` | Data arrival timeout for warning trigger (detects task failure or outage) |
+| `{$SPEEDTEST.WARN.DOWN}` | `50M` | Download bandwidth warning threshold in bps (0 to disable) |
+| `{$SPEEDTEST.WARN.UP}` | `20M` | Upload bandwidth warning threshold in bps (0 to disable) |
+| `{$SPEEDTEST.WARN.PING}` | `50` | Ping latency warning threshold in ms (0 to disable) |
+| `{$SPEEDTEST.WARN.LOSS}` | `2` | Packet loss warning threshold in % (0 to disable) |
 
 ---
 
@@ -286,8 +305,8 @@ By utilizing Windows built-in `wscript.exe` (GUI subsystem) and the included `ru
 | [`README.md`](./README.md) | Japanese documentation |
 | [`README_EN.md`](./README_EN.md) | English documentation |
 | [`AGENTS.md`](./AGENTS.md) | **AI coding assistant setup protocol** (AI-setup-ready) |
-| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 / 6.0 unified template (Japanese edition) |
-| [`Speedtest_EN.yaml`](./Speedtest_EN.yaml) | Zabbix 7.0 / 6.0 unified template (English edition / official submission) |
+| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 unified template (Japanese, includes dashboard) |
+| [`Speedtest_EN.yaml`](./Speedtest_EN.yaml) | Zabbix 7.0 Multiplatform Template (English / Community Templates compatible) |
 | [`speedtest.ps1`](./speedtest.ps1) | Windows PowerShell sender (native TCP socket & ZabbixSender support) |
 | [`speedtest.bat`](./speedtest.bat) | Windows batch wrapper (auto-selects PowerShell 7 or 5.1) |
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Cross-platform Python sender (uses official `zabbix-utils`) |

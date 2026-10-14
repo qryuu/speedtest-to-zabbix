@@ -201,19 +201,38 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 
 | アイテムキー | アイテムタイプ | データ型 | 単位 | 説明 |
 | :--- | :--- | :--- | :--- | :--- |
-| `speedtest.json` | **マスター (トラッパー)** | テキスト | - | 計測結果の生 JSON（各スクリプトからこれを受信） |
+| `speedtest.json` | **マスター (トラッパー)** | テキスト | - | 計測結果の生 JSON（各スクリプトからこれを受信、history: 1d） |
 | `speedtest.download.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | ダウンロード実効速度 |
 | `speedtest.upload.bps` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `bps` | アップロード実効速度 |
 | `speedtest.ping.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | Ping 遅延時間 |
 | `speedtest.ping.jitter` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | ジッター |
 | `speedtest.download.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | ダウンロード負荷時遅延 (Bufferbloat) |
 | `speedtest.upload.latency` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `ms` | アップロード負荷時遅延 (Bufferbloat) |
-| `speedtest.packetloss` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `%` | パケットロス率 |
+| `speedtest.packetloss` | 依存アイテム (JSONPATH) | 数値 (浮動小数) | `%` | パケットロス率 (サーバー非対応時は未取得) |
 | `speedtest.download.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | ダウンロード通信量 |
 | `speedtest.upload.bytes` | 依存アイテム (JSONPATH) | 数値 (符号なし) | `B` | アップロード通信量 |
 | `speedtest.server.name` | 依存アイテム (JSONPATH) | 文字列 | - | 接続先サーバー名 |
-| `speedtest.server.id` | 依存アイテム (JSONPATH) | 数値 (符号なし) | - | 接続先サーバー ID |
+| `speedtest.server.id` | 依存アイテム (JSONPATH) | 数値 (符号なし) | - | 接続先サーバー ID (trends: 0) |
 | `speedtest.result.url` | 依存アイテム (JSONPATH) | 文字列 | - | 結果 Web 共有 URL |
+| `speedtest.isp` | 依存アイテム (JSONPATH) | 文字列 | - | 契約プロバイダ (ISP) 名称 |
+| `speedtest.interface.externalip` | 依存アイテム (JSONPATH) | 文字列 | - | 測定元WAN側グローバルIPアドレス |
+| `speedtest.server.location` | 依存アイテム (JSONPATH) | 文字列 | - | 接続先サーバーの設置地域 |
+| `speedtest.timestamp` | 依存アイテム (JSONPATH) | 文字列 | - | Ookla CLI が返却した測定完了時刻 (ISO 8601) |
+
+---
+
+### マクロ（閾値カスタマイズ）
+
+テンプレートマクロにより、アラート閾値や判定回数を柔軟に調整可能です（`0` を指定することで該当トリガーを無効化できます）。
+
+| マクロ名 | デフォルト値 | 説明 |
+| :--- | :--- | :--- |
+| `{$SPEEDTEST.EVAL.COUNT}` | `3` | 閾値判定に使用する直近の測定回数（一時的な変動によるフラッピングを防止） |
+| `{$SPEEDTEST.NODATA.WARN}` | `3h` | データ未着検知時間（定期実行タスク停止や通信途絶を検知） |
+| `{$SPEEDTEST.WARN.DOWN}` | `50M` | ダウンロード速度低下警告閾値 (bps)（0で無効化） |
+| `{$SPEEDTEST.WARN.UP}` | `20M` | アップロード速度低下警告閾値 (bps)（0で無効化） |
+| `{$SPEEDTEST.WARN.PING}` | `50` | Ping遅延警告閾値 (ms)（0で無効化） |
+| `{$SPEEDTEST.WARN.LOSS}` | `2` | パケットロス警告閾値 (%)（0で無効化） |
 
 ---
 
@@ -285,8 +304,8 @@ Windows 標準の `wscript.exe`（GUI サブシステム）と同梱の `run_hid
 | ファイル | 役割・説明 |
 | :--- | :--- |
 | [`AGENTS.md`](./AGENTS.md) | **AI コーディングアシスタント向け対話指示書** (AI-setup-ready プロトコル) |
-| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 共通監視テンプレート (日本語版 / トラッパーアイテム群 & 自動計算) |
-| [`Speedtest_EN.yaml`](./Speedtest_EN.yaml) | Zabbix 7.0 共通監視テンプレート (英語版 / 公式提出準拠) |
+| [`Speedtest.yaml`](./Speedtest.yaml) | Zabbix 7.0 共通監視テンプレート (日本語版・ダッシュボード同梱) |
+| [`Speedtest_EN.yaml`](./Speedtest_EN.yaml) | Zabbix 7.0 Multiplatform Template (English / Community Templates compatible) |
 | [`speedtest.ps1`](./speedtest.ps1) | Windows 用 PowerShell 送信スクリプト (ソケット送信 / ZabbixSender 兼用) |
 | [`speedtest.bat`](./speedtest.bat) | Windows 用実行ラッパーバッチ (PowerShell 7 / 5.1 振り分け) |
 | [`speedtest_zabbix.py`](./speedtest_zabbix.py) | Linux / Windows 共通 Python 送信スクリプト (`zabbix-utils` 使用) |
