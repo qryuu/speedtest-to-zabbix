@@ -1,4 +1,4 @@
-#
+﻿#
 <#
 .SYNOPSIS
     Speedtest to Zabbix の Windows 自動セットアップスクリプト。

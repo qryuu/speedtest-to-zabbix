@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Ookla Speedtest CLI を実行し、計測結果をパースして Zabbix サーバーへ送信するスクリプト。
 

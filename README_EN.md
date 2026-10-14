@@ -198,25 +198,25 @@ python3 import_template.py -u "http://192.168.1.10/zabbix" -t "<API_TOKEN>" -s "
 
 This template follows Zabbix's best practice: **"Single Master Item (Trapper) + Dependent Items (JSONPATH extraction & calculation)"**. Scripts only send a single `speedtest.json` payload, and Zabbix server automatically extracts and calculates all individual metrics instantaneously.
 
-| Item Key | Item Type | Data Type | Units | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `speedtest.json` | **Master (Trapper)** | Text | - | Raw JSON result (scripts send this single item, history: 1d) |
-| `speedtest.download.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | Download bandwidth |
-| `speedtest.upload.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | Upload bandwidth |
-| `speedtest.ping.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Idle ping latency |
-| `speedtest.ping.jitter` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency jitter |
-| `speedtest.download.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency under download load (Bufferbloat) |
-| `speedtest.upload.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | Latency under upload load (Bufferbloat) |
-| `speedtest.packetloss` | Dependent (JSONPATH) | Numeric (float) | `%` | Packet loss percentage (discarded if unsupported by server) |
-| `speedtest.download.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | Total download data transfer |
-| `speedtest.upload.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | Total upload data transfer |
-| `speedtest.server.name` | Dependent (JSONPATH) | Character | - | Connected test server name |
-| `speedtest.server.id` | Dependent (JSONPATH) | Numeric (unsigned) | - | Connected test server ID (trends: 0) |
-| `speedtest.result.url` | Dependent (JSONPATH) | Character | - | Ookla web result URL |
-| `speedtest.isp` | Dependent (JSONPATH) | Character | - | Internet Service Provider (ISP) name |
-| `speedtest.interface.externalip` | Dependent (JSONPATH) | Character | - | Client WAN external IP address |
-| `speedtest.server.location` | Dependent (JSONPATH) | Character | - | Geographic location of the test server |
-| `speedtest.timestamp` | Dependent (JSONPATH) | Character | - | Measurement completion timestamp (ISO 8601) |
+| Item Key | Item Type | Data Type | Units | component Tag | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `speedtest.json` | **Master (Trapper)** | Text | - | `raw` | Raw JSON result (scripts send this single item, history: 1d) |
+| `speedtest.download.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | `network` | Download bandwidth |
+| `speedtest.upload.bps` | Dependent (JSONPATH) | Numeric (unsigned) | `bps` | `network` | Upload bandwidth |
+| `speedtest.ping.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | `network` | Idle ping latency |
+| `speedtest.ping.jitter` | Dependent (JSONPATH) | Numeric (float) | `ms` | `network` | Latency jitter |
+| `speedtest.download.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | `network` | Latency under download load (Bufferbloat) |
+| `speedtest.upload.latency` | Dependent (JSONPATH) | Numeric (float) | `ms` | `network` | Latency under upload load (Bufferbloat) |
+| `speedtest.packetloss` | Dependent (JSONPATH) | Numeric (float) | `%` | `network` | Packet loss percentage (discarded if unsupported by server) |
+| `speedtest.download.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | `network` | Total download data transfer |
+| `speedtest.upload.bytes` | Dependent (JSONPATH) | Numeric (unsigned) | `B` | `network` | Total upload data transfer |
+| `speedtest.server.name` | Dependent (JSONPATH) | Character | - | `metadata` | Connected test server name |
+| `speedtest.server.id` | Dependent (JSONPATH) | Numeric (unsigned) | - | `metadata` | Connected test server ID (trends: 0) |
+| `speedtest.result.url` | Dependent (JSONPATH) | Character | - | `metadata` | Ookla web result URL |
+| `speedtest.isp` | Dependent (JSONPATH) | Character | - | `metadata` | Internet Service Provider (ISP) name |
+| `speedtest.interface.externalip` | Dependent (JSONPATH) | Character | - | `metadata` | Client WAN external IP address |
+| `speedtest.server.location` | Dependent (JSONPATH) | Character | - | `metadata` | Geographic location of the test server |
+| `speedtest.timestamp` | Dependent (JSONPATH) | Character | - | `metadata` | Measurement completion timestamp (ISO 8601) |
 
 ---
 
@@ -232,6 +232,11 @@ Thresholds and evaluation counts can be easily tuned via template macros (set to
 | `{$SPEEDTEST.WARN.UP}` | `20M` | Upload bandwidth warning threshold in bps (0 to disable) |
 | `{$SPEEDTEST.WARN.PING}` | `50` | Ping latency warning threshold in ms (0 to disable) |
 | `{$SPEEDTEST.WARN.LOSS}` | `2` | Packet loss warning threshold in % (0 to disable) |
+
+> [!IMPORTANT]
+> **⚠️ Migration Notes / Breaking Changes from Earlier Releases**:  
+> - **Macro Renaming**: The data arrival timeout macro was renamed from `{$SPEEDTEST.NODATA}` to `{$SPEEDTEST.NODATA.WARN}`. If you customized this threshold at the host level, please update the host macro name to `{$SPEEDTEST.NODATA.WARN}` (otherwise the default `3h` will be applied).
+> - **Packet Loss Behavior**: The legacy fallback that injected `0%` when a server omitted packet loss data has been removed. Missing values are now properly discarded (`DISCARD_VALUE`), avoiding false 0% loss records on unsupported endpoints.
 
 ---
 
