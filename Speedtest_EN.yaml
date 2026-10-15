@@ -1,12 +1,10 @@
 zabbix_export:
   version: '7.0'
   template_groups:
-    - uuid: 846977d1dfed4968bc5f8bdb363285bc
+    - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
       name: Templates/Applications
-    - uuid: 9a8b161e6ea443b5b300a59a3fe69ece
+    - uuid: c2e2978007a544bbbb4d440c9cf931b6
       name: 'Templates/Network services'
-    - uuid: af98a02754a64314a929f3954d02e5c4
-      name: 'qryuu Templates'
   templates:
     - uuid: 22b975348cd340c4987a1ee61481c8b6
       template: template_speedtest_multiplatform
@@ -20,7 +18,6 @@ zabbix_export:
       groups:
         - name: Templates/Applications
         - name: 'Templates/Network services'
-        - name: 'qryuu Templates'
       items:
         - uuid: 602a3cd356e744c2ad02a72a37fa3eda
           name: 'Speedtest: Raw data (JSON)'
