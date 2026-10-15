@@ -3,8 +3,6 @@ zabbix_export:
   template_groups:
     - uuid: a571c0d144b14fd4a87a9d9b2aa9fcd6
       name: Templates/Applications
-    - uuid: c2e2978007a544bbbb4d440c9cf931b6
-      name: 'Templates/Network services'
   templates:
     - uuid: 22b975348cd340c4987a1ee61481c8b6
       template: template_speedtest_multiplatform
@@ -18,7 +16,6 @@ zabbix_export:
         version: 7.0-1
       groups:
         - name: Templates/Applications
-        - name: 'Templates/Network services'
       items:
         - uuid: 602a3cd356e744c2ad02a72a37fa3eda
           name: 'Speedtest: 生データ (JSON)'
